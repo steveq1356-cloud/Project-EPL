@@ -4,9 +4,11 @@ import { api } from '../api/index.js';
 import { PROJECT_TABS } from '../constants.js';
 import InlineText from '../components/InlineText.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
+import LogTab from './project/LogTab.jsx';
 import OverviewTab from './project/OverviewTab.jsx';
+import PhotosTab from './project/PhotosTab.jsx';
 
-const COMING = { log: 2, photos: 2, purchases: 3, tasks: 3, links: 3 };
+const COMING = { purchases: 3, tasks: 3, links: 3 };
 
 export default function ProjectPage() {
   const { id, tab = 'overview' } = useParams();
@@ -18,6 +20,10 @@ export default function ProjectPage() {
     setProject(null);
     setError(null);
     api.projects.get(id).then(setProject).catch((e) => setError(e.message));
+  }, [id]);
+
+  const reloadProject = useCallback(() => {
+    api.projects.get(id).then(setProject).catch(() => {});
   }, [id]);
 
   // Optimistic: show the change immediately, roll back if the server rejects it.
@@ -93,6 +99,10 @@ export default function ProjectPage() {
       <section className="tab-panel">
         {tab === 'overview' ? (
           <OverviewTab project={project} save={save} />
+        ) : tab === 'log' ? (
+          <LogTab project={project} />
+        ) : tab === 'photos' ? (
+          <PhotosTab project={project} save={save} reloadProject={reloadProject} />
         ) : (
           <p className="muted">The {PROJECT_TABS.find((t) => t.id === tab)?.label ?? tab} tab is coming in Phase {COMING[tab] ?? '?'}.</p>
         )}

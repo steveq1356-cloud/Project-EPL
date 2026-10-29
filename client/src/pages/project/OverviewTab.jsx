@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../api/index.js';
 import { PROJECT_STATUSES } from '../../constants.js';
 import InlineText from '../../components/InlineText.jsx';
@@ -21,6 +21,16 @@ export default function OverviewTab({ project, save }) {
 
   return (
     <div className="overview">
+      {project.cover ? (
+        <Link to={`/projects/${project.id}/photos`} className="overview-cover" title="Change in the Photos tab">
+          <img src={project.cover.thumb_url} alt={project.cover.caption || 'Cover photo'} />
+        </Link>
+      ) : (
+        <Link to={`/projects/${project.id}/photos`} className="overview-cover empty muted">
+          No cover photo — pick one in Photos
+        </Link>
+      )}
+
       <dl className="fields">
         <dt>Summary</dt>
         <dd>

@@ -3,6 +3,8 @@ import path from 'node:path';
 import express from 'express';
 import { CLIENT_DIST, DB_PATH, HOST, PORT, UPLOADS_DIR } from './config.js';
 import { getDb } from './db/connection.js';
+import logRouter from './routes/log.js';
+import photosRouter from './routes/photos.js';
 import projectsRouter from './routes/projects.js';
 
 getDb(); // open the database and apply migrations before taking requests
@@ -12,6 +14,8 @@ app.use(express.json({ limit: '2mb' }));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 app.use('/api/projects', projectsRouter);
+app.use('/api', logRouter);
+app.use('/api', photosRouter);
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
 app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '7d', immutable: true }));
@@ -23,7 +27,7 @@ if (fs.existsSync(CLIENT_DIST)) {
 }
 
 app.use((err, req, res, next) => {
-  const status = err.status || 500;
+  const status = err.status || (err.name === 'MulterError' ? 400 : 500);
   if (status >= 500) console.error(err);
   res.status(status).json({ error: err.message || 'Server error' });
 });

@@ -1,15 +1,22 @@
 import { getDb } from '../db/connection.js';
 import { ValidationError } from '../errors.js';
+import { removeUploadFiles } from '../uploads.js';
+import { getPhoto } from './photos.js';
 
 export const PROJECT_STATUSES = ['Idea', 'Active', 'On Hold', 'Done', 'Abandoned'];
 
-const EDITABLE = ['name', 'summary', 'goal', 'status', 'start_date', 'target_date', 'next_action', 'tags'];
+const EDITABLE = ['name', 'summary', 'goal', 'status', 'start_date', 'target_date', 'next_action', 'tags', 'cover_photo_id'];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-const fromRow = (row) => row && { ...row, tags: JSON.parse(row.tags) };
+const fromRow = (row) =>
+  row && {
+    ...row,
+    tags: JSON.parse(row.tags),
+    cover: row.cover_photo_id ? getPhoto(row.cover_photo_id) : null,
+  };
 
 // Checks and normalizes the fields a client sent; unknown fields are ignored.
-function clean(input, { creating }) {
+function clean(input, { creating, id }) {
   const out = {};
   for (const key of EDITABLE) {
     if (!(key in input)) continue;
@@ -30,6 +37,9 @@ function clean(input, { creating }) {
         .map((t) => String(t).trim())
         .filter((t) => t && !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
       value = JSON.stringify(value);
+    } else if (key === 'cover_photo_id') {
+      value = value || null;
+      if (value && getPhoto(value)?.project_id !== id) throw new ValidationError('Cover photo must be one of this project’s photos');
     } else {
       value = String(value ?? '');
     }
@@ -57,7 +67,7 @@ export function createProject(input) {
 }
 
 export function updateProject(id, input) {
-  const fields = clean(input, { creating: false });
+  const fields = clean(input, { creating: false, id });
   const cols = Object.keys(fields);
   if (cols.length) {
     getDb()
@@ -71,9 +81,15 @@ export function updateProject(id, input) {
   return getProject(id);
 }
 
-// Deletes the project and (via ON DELETE CASCADE) everything in it.
+// Deletes the project, everything in it (via ON DELETE CASCADE), and its uploaded files.
 export function deleteProject(id) {
-  return getDb().prepare('DELETE FROM projects WHERE id = ?').run(id).changes > 0;
+  const db = getDb();
+  const files = db
+    .prepare('SELECT stored_name FROM photos WHERE project_id = ? UNION ALL SELECT stored_name FROM attachments WHERE project_id = ?')
+    .all(id, id);
+  const deleted = db.prepare('DELETE FROM projects WHERE id = ?').run(id).changes > 0;
+  if (deleted) files.forEach((f) => removeUploadFiles(f.stored_name));
+  return deleted;
 }
 
 export function listTags() {

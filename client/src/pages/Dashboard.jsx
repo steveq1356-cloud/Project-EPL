@@ -27,6 +27,9 @@ export default function Dashboard({ onNewProject }) {
         <div className="card-grid">
           {projects.map((p) => (
             <Link key={p.id} to={`/projects/${p.id}`} className="card card-link">
+              <div className={`card-cover ${p.cover ? '' : 'empty'}`}>
+                {p.cover ? <img src={p.cover.thumb_url} alt="" loading="lazy" /> : <span>{p.name.slice(0, 1)}</span>}
+              </div>
               <div className="card-top">
                 <h2>{p.name}</h2>
                 <StatusBadge status={p.status} />
