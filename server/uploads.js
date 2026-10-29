@@ -35,6 +35,20 @@ export const imageUpload = multer({
   },
 });
 
+// Any file type (receipts, PDFs, CAD models, datasheets). The extension is kept so
+// downloads and the 3D viewer can tell what the file is.
+const fileStorage = multer.diskStorage({
+  destination: ORIGINALS_DIR,
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).slice(1).toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
+    cb(null, `${Date.now()}-${crypto.randomBytes(6).toString('hex')}.${ext}`);
+  },
+});
+
+export const fileUpload = multer({ storage: fileStorage, limits: { fileSize: 250 * 1024 * 1024, files: 10 } });
+
+export const isImageMime = (mime) => Boolean(IMAGE_TYPES[mime]);
+
 export const thumbName = (storedName) => `${storedName}.webp`;
 
 // Writes a thumbnail (EXIF-rotated, max 480px) and returns the upright image size.

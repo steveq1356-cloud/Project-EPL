@@ -3,6 +3,8 @@ import path from 'node:path';
 import express from 'express';
 import { CLIENT_DIST, DB_PATH, HOST, PORT, UPLOADS_DIR } from './config.js';
 import { getDb } from './db/connection.js';
+import insightsRouter from './routes/insights.js';
+import itemsRouter from './routes/items.js';
 import logRouter from './routes/log.js';
 import photosRouter from './routes/photos.js';
 import projectsRouter from './routes/projects.js';
@@ -16,6 +18,8 @@ app.get('/api/health', (req, res) => res.json({ ok: true }));
 app.use('/api/projects', projectsRouter);
 app.use('/api', logRouter);
 app.use('/api', photosRouter);
+app.use('/api', itemsRouter);
+app.use('/api', insightsRouter);
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
 app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '7d', immutable: true }));

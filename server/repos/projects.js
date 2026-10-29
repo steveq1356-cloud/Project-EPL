@@ -5,15 +5,31 @@ import { getPhoto } from './photos.js';
 
 export const PROJECT_STATUSES = ['Idea', 'Active', 'On Hold', 'Done', 'Abandoned'];
 
-const EDITABLE = ['name', 'summary', 'goal', 'status', 'start_date', 'target_date', 'next_action', 'tags', 'cover_photo_id'];
+const EDITABLE = ['name', 'summary', 'goal', 'status', 'start_date', 'target_date', 'next_action', 'tags', 'cover_photo_id', 'budget', 'specs'];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const fromRow = (row) =>
   row && {
     ...row,
     tags: JSON.parse(row.tags),
+    specs: JSON.parse(row.specs),
     cover: row.cover_photo_id ? getPhoto(row.cover_photo_id) : null,
   };
+
+// Key figures: [{ label, value, unit?, note? }] — e.g. "Peak stress", "0.90", "MPa".
+function cleanSpecs(value) {
+  if (!Array.isArray(value)) throw new ValidationError('specs must be a list');
+  return JSON.stringify(
+    value
+      .map((s) => ({
+        label: String(s?.label ?? '').trim(),
+        value: String(s?.value ?? '').trim(),
+        unit: String(s?.unit ?? '').trim(),
+        note: String(s?.note ?? '').trim(),
+      }))
+      .filter((s) => s.label || s.value),
+  );
+}
 
 // Checks and normalizes the fields a client sent; unknown fields are ignored.
 function clean(input, { creating, id }) {
@@ -40,6 +56,18 @@ function clean(input, { creating, id }) {
     } else if (key === 'cover_photo_id') {
       value = value || null;
       if (value && getPhoto(value)?.project_id !== id) throw new ValidationError('Cover photo must be one of this project’s photos');
+    } else if (key === 'budget') {
+      // Dollars in, cents stored; empty clears the budget.
+      if (value === '' || value == null) {
+        out.budget_cents = null;
+      } else {
+        const n = Number(value);
+        if (!Number.isFinite(n) || n < 0) throw new ValidationError('Budget must be a positive number');
+        out.budget_cents = Math.round(n * 100);
+      }
+      continue;
+    } else if (key === 'specs') {
+      value = cleanSpecs(value);
     } else {
       value = String(value ?? '');
     }

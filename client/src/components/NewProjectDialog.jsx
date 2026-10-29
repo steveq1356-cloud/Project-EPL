@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/index.js';
 import { PROJECT_STATUSES } from '../constants.js';
+import { useData } from './DataContext.jsx';
 import Modal from './Modal.jsx';
 
 export default function NewProjectDialog({ onClose }) {
   const navigate = useNavigate();
+  const { changed } = useData();
   const [name, setName] = useState('');
   const [status, setStatus] = useState('Active');
   const [summary, setSummary] = useState('');
@@ -17,7 +19,8 @@ export default function NewProjectDialog({ onClose }) {
     setSaving(true);
     setError(null);
     try {
-      const project = await api.projects.create({ name, status, summary });
+      const project = await api.projects.create({ name, status, summary, start_date: status === 'Active' ? new Date().toISOString().slice(0, 10) : null });
+      changed();
       onClose();
       navigate(`/projects/${project.id}`);
     } catch (err) {

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 // Native <dialog>: focus trapping, Esc to close and the backdrop come for free.
-export default function Modal({ title, onClose, children, wide = false }) {
+export default function Modal({ title, onClose, children, wide = false, className = '' }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -15,7 +15,7 @@ export default function Modal({ title, onClose, children, wide = false }) {
   return (
     <dialog
       ref={ref}
-      className={`modal ${wide ? 'modal-wide' : ''}`}
+      className={`modal ${wide ? 'modal-wide' : ''} ${className}`}
       onCancel={(e) => {
         e.preventDefault();
         onClose();

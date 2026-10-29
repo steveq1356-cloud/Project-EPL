@@ -17,12 +17,30 @@ async function request(method, url, body) {
   return data;
 }
 
+const form = (fields, files = {}) => {
+  const data = new FormData();
+  for (const [k, v] of Object.entries(fields)) if (v !== undefined && v !== null) data.append(k, String(v));
+  for (const [k, file] of Object.entries(files)) if (file) data.append(k, file, file.name);
+  return data;
+};
+
+// list / create under a project, update / remove by id.
+const scoped = (name) => ({
+  list: (projectId) => request('GET', `/projects/${projectId}/${name}`),
+  create: (projectId, fields) => request('POST', `/projects/${projectId}/${name}`, fields),
+  update: (id, fields) => request('PATCH', `/${name}/${id}`, fields),
+  remove: (id) => request('DELETE', `/${name}/${id}`),
+});
+
 export const restBackend = {
   health: () => request('GET', '/health'),
+  dashboard: () => request('GET', '/dashboard'),
+  search: (q) => request('GET', `/search?q=${encodeURIComponent(q)}`),
 
   projects: {
     list: () => request('GET', '/projects'),
     get: (id) => request('GET', `/projects/${id}`),
+    insights: (id) => request('GET', `/projects/${id}/insights`),
     create: (fields) => request('POST', '/projects', fields),
     update: (id, fields) => request('PATCH', `/projects/${id}`, fields),
     remove: (id) => request('DELETE', `/projects/${id}`),
@@ -30,24 +48,36 @@ export const restBackend = {
   },
 
   log: {
-    list: (projectId) => request('GET', `/projects/${projectId}/log`),
+    ...scoped('log'),
     get: (id) => request('GET', `/log/${id}`),
-    create: (projectId, fields) => request('POST', `/projects/${projectId}/log`, fields),
-    update: (id, fields) => request('PATCH', `/log/${id}`, fields),
-    remove: (id) => request('DELETE', `/log/${id}`),
   },
 
   photos: {
     list: (projectId) => request('GET', `/projects/${projectId}/photos`),
     // files: File[]; options: { logEntryId, caption }
     upload: (projectId, files, { logEntryId, caption } = {}) => {
-      const form = new FormData();
-      for (const file of files) form.append('files', file, file.name || 'pasted-image.png');
-      if (logEntryId) form.append('log_entry_id', String(logEntryId));
-      if (caption) form.append('caption', caption);
-      return request('POST', `/projects/${projectId}/photos`, form);
+      const data = new FormData();
+      for (const file of files) data.append('files', file, file.name || 'pasted-image.png');
+      if (logEntryId) data.append('log_entry_id', String(logEntryId));
+      if (caption) data.append('caption', caption);
+      return request('POST', `/projects/${projectId}/photos`, data);
     },
     update: (id, fields) => request('PATCH', `/photos/${id}`, fields),
     remove: (id) => request('DELETE', `/photos/${id}`),
+  },
+
+  purchases: {
+    ...scoped('purchases'),
+    meta: () => request('GET', '/purchases/meta'),
+    uploadReceipt: (id, file) => request('POST', `/purchases/${id}/receipt`, form({}, { file })),
+    removeReceipt: (id) => request('DELETE', `/purchases/${id}/receipt`),
+  },
+
+  tasks: scoped('tasks'),
+
+  links: {
+    ...scoped('links'),
+    // A file instead of a URL: CAD models, drawings, datasheets.
+    upload: (projectId, file, fields = {}) => request('POST', `/projects/${projectId}/links`, form(fields, { file })),
   },
 };

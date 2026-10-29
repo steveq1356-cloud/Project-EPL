@@ -1,10 +1,12 @@
 import { Router } from 'express';
+import { projectsWithStats } from '../repos/insights.js';
 import * as projects from '../repos/projects.js';
 
 const router = Router();
 
+// Includes per-project stats (spend, task counts, last activity, stale flag) for the sidebar and cards.
 router.get('/', (req, res) => {
-  res.json(projects.listProjects());
+  res.json(projectsWithStats());
 });
 
 router.get('/tags', (req, res) => {
