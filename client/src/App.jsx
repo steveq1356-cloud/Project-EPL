@@ -1,44 +1,43 @@
-import { useEffect, useState } from 'react';
-import { api } from './api/index.js';
+import { useState } from 'react';
+import { BrowserRouter, Link, Route, Routes } from 'react-router-dom';
 import { useTheme } from './hooks/useTheme.js';
-
-const statusClass = (status) => `status status-${status.toLowerCase().replace(/\s+/g, '-')}`;
+import NewProjectDialog from './components/NewProjectDialog.jsx';
+import Dashboard from './pages/Dashboard.jsx';
+import ProjectPage from './pages/ProjectPage.jsx';
 
 export default function App() {
   const { theme, cycle } = useTheme();
-  const [projects, setProjects] = useState(null);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    api.projects.list().then(setProjects).catch((e) => setError(e.message));
-  }, []);
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
 
   return (
-    <>
+    <BrowserRouter>
       <header className="topbar">
-        <a className="brand" href="/">EPL</a>
-        <span className="muted">Engineering Project Log</span>
+        <Link className="brand" to="/">EPL</Link>
+        <span className="muted topbar-subtitle">Engineering Project Log</span>
         <div className="spacer" />
-        <button className="btn" onClick={cycle} title="Switch theme">
+        <button className="btn" onClick={() => setNewProjectOpen(true)}>
+          + Project
+        </button>
+        <button className="btn" onClick={cycle} title="Switch theme (system → light → dark)">
           Theme: {theme}
         </button>
       </header>
 
-      <main className="page">
-        <h1>Projects</h1>
-        {error && <p className="error">Couldn't load projects: {error}</p>}
-        {!projects && !error && <p className="muted">Loading…</p>}
-        {projects && (
-          <div className="card-grid">
-            {projects.map((p) => (
-              <article key={p.id} className="card">
-                <h2>{p.name}</h2>
-                <span className={statusClass(p.status)}>{p.status}</span>
-              </article>
-            ))}
-          </div>
-        )}
-      </main>
-    </>
+      <Routes>
+        <Route path="/" element={<Dashboard onNewProject={() => setNewProjectOpen(true)} />} />
+        <Route path="/projects/:id" element={<ProjectPage />} />
+        <Route path="/projects/:id/:tab" element={<ProjectPage />} />
+        <Route
+          path="*"
+          element={
+            <main className="page">
+              <p>Page not found. <Link to="/">Back to dashboard</Link></p>
+            </main>
+          }
+        />
+      </Routes>
+
+      {newProjectOpen && <NewProjectDialog onClose={() => setNewProjectOpen(false)} />}
+    </BrowserRouter>
   );
 }

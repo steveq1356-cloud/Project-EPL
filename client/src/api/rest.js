@@ -22,5 +22,9 @@ export const restBackend = {
   projects: {
     list: () => request('GET', '/projects'),
     get: (id) => request('GET', `/projects/${id}`),
+    create: (fields) => request('POST', '/projects', fields),
+    update: (id, fields) => request('PATCH', `/projects/${id}`, fields),
+    remove: (id) => request('DELETE', `/projects/${id}`),
+    tags: () => request('GET', '/projects/tags'),
   },
 };

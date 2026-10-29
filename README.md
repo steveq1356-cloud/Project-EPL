@@ -4,8 +4,9 @@ A private, local dashboard for personal engineering projects: overview, log, pur
 tasks, photos and links in one place. It runs only on your laptop (`127.0.0.1`), has no
 login, and keeps everything in a single SQLite file plus an uploads folder.
 
-> **Status:** Phase 0 (scaffold). The dashboard lists projects; editing and the other
-> features arrive in later phases.
+> **Status:** Phase 1. Create, edit and delete projects; every Overview field is edited
+> in place (click it, type, press Enter). Log, Purchases, Tasks, Photos and Links tabs
+> arrive in later phases.
 
 ## Requirements
 

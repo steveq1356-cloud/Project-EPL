@@ -23,8 +23,9 @@ if (fs.existsSync(CLIENT_DIST)) {
 }
 
 app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ error: err.message || 'Server error' });
+  const status = err.status || 500;
+  if (status >= 500) console.error(err);
+  res.status(status).json({ error: err.message || 'Server error' });
 });
 
 app.listen(PORT, HOST, () => {
