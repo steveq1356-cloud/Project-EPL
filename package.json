@@ -1,0 +1,32 @@
+{
+  "name": "epl",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Personal Engineering Project Log — a local dashboard for personal projects",
+  "type": "module",
+  "workspaces": [
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c blue,magenta \"node --watch-path=server server/index.js\" \"npm run dev -w client\"",
+    "build": "npm run build -w client",
+    "start": "npm run build && node server/index.js",
+    "seed": "node scripts/seed.js",
+    "backup": "node scripts/backup.js",
+    "restore": "node scripts/restore.js"
+  },
+  "dependencies": {
+    "adm-zip": "^0.6.1",
+    "better-sqlite3": "^13.0.3",
+    "express": "^5.3.0",
+    "multer": "^2.5.0",
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  },
+  "allowScripts": {
+    "better-sqlite3@13.0.3": false,
+    "esbuild@0.25.12": true
+  }
+}

@@ -1,0 +1,218 @@
+/* Engineering-notebook theme: graph-paper background, ink blue accents, monospace data. */
+
+:root {
+  --bg: #f7f6f1;
+  --grid: rgba(31, 78, 121, 0.07);
+  --surface: #ffffff;
+  --surface-2: #f0efe8;
+  --border: #d9d6cb;
+  --text: #1d2430;
+  --text-muted: #5f6673;
+  --accent: #1f4e79;
+  --accent-contrast: #ffffff;
+  --danger: #b3261e;
+  --warn: #9a6200;
+  --ok: #2e7d32;
+
+  --status-idea: #6b5ca5;
+  --status-active: #2e7d32;
+  --status-onhold: #9a6200;
+  --status-done: #1f4e79;
+  --status-abandoned: #7a7a7a;
+
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --radius: 6px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #14171c;
+    --grid: rgba(120, 170, 220, 0.05);
+    --surface: #1c2027;
+    --surface-2: #232832;
+    --border: #323946;
+    --text: #e3e6eb;
+    --text-muted: #9aa3b0;
+    --accent: #7fb3e6;
+    --accent-contrast: #0e1726;
+    --danger: #f28b82;
+    --warn: #e6b450;
+    --ok: #81c995;
+    --status-idea: #b4a7e6;
+    --status-active: #81c995;
+    --status-onhold: #e6b450;
+    --status-done: #7fb3e6;
+    --status-abandoned: #9a9a9a;
+    --shadow: none;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #14171c;
+  --grid: rgba(120, 170, 220, 0.05);
+  --surface: #1c2027;
+  --surface-2: #232832;
+  --border: #323946;
+  --text: #e3e6eb;
+  --text-muted: #9aa3b0;
+  --accent: #7fb3e6;
+  --accent-contrast: #0e1726;
+  --danger: #f28b82;
+  --warn: #e6b450;
+  --ok: #81c995;
+  --status-idea: #b4a7e6;
+  --status-active: #81c995;
+  --status-onhold: #e6b450;
+  --status-done: #7fb3e6;
+  --status-abandoned: #9a9a9a;
+  --shadow: none;
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+}
+
+body {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 20px 20px;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+a {
+  color: var(--accent);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* ---- app shell ---- */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.topbar .spacer {
+  flex: 1;
+}
+
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.page h1 {
+  font-size: 20px;
+  margin: 0 0 16px;
+}
+
+/* ---- controls ---- */
+
+.btn {
+  font: inherit;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.btn:hover {
+  border-color: var(--accent);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ---- project cards ---- */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 12px;
+}
+
+.card h2 {
+  font-size: 15px;
+  margin: 0 0 6px;
+}
+
+.status {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+}
+
+.status-idea { color: var(--status-idea); }
+.status-active { color: var(--status-active); }
+.status-on-hold { color: var(--status-onhold); }
+.status-done { color: var(--status-done); }
+.status-abandoned { color: var(--status-abandoned); }
+
+.muted {
+  color: var(--text-muted);
+}
+
+.error {
+  color: var(--danger);
+}
+
+@media (max-width: 600px) {
+  .topbar,
+  .page {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

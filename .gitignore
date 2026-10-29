@@ -1,0 +1,11 @@
+node_modules/
+client/dist/
+
+# Your data never goes into git — back it up with `npm run backup`
+data/
+data-before-restore-*/
+backups/
+
+.env
+*.log
+.DS_Store
