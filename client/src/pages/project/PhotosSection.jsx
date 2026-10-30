@@ -1,5 +1,7 @@
+import { Camera, Star, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../../api/index.js';
+import EmptyState from '../../components/EmptyState.jsx';
 import InlineText from '../../components/InlineText.jsx';
 import Lightbox from '../../components/Lightbox.jsx';
 import PhotoDrop from '../../components/PhotoDrop.jsx';
@@ -68,11 +70,11 @@ export default function PhotosSection({ project, photos, setPhotos, entries, sav
                   <img src={photo.thumb_url} alt={photo.caption || photo.original_name} loading="lazy" />
                 </button>
                 <span className="photo-tile-tools">
-                  <button className={`tile-tool ${isCover ? 'on' : ''}`} onClick={() => setCover(photo)} title={isCover ? 'Cover photo — click to unset' : 'Use as cover'}>
-                    {isCover ? '★' : '☆'}
+                  <button className={`tile-tool ${isCover ? 'on' : ''}`} onClick={() => setCover(photo)} title={isCover ? 'Cover photo — click to unset' : 'Use as cover'} aria-label="Cover photo">
+                    <Star size={13} fill={isCover ? 'currentColor' : 'none'} />
                   </button>
                   <button className="tile-tool" onClick={() => remove(photo)} title="Delete photo" aria-label="Delete photo">
-                    ×
+                    <Trash2 size={13} />
                   </button>
                 </span>
                 {photo.caption && <figcaption>{photo.caption}</figcaption>}
@@ -87,6 +89,11 @@ export default function PhotosSection({ project, photos, setPhotos, entries, sav
         </button>
       )}
 
+      {photos.length === 0 && (
+        <EmptyState icon={Camera} title="No photos yet">
+          Progress shots, test setups, failures worth remembering. The first one becomes the cover.
+        </EmptyState>
+      )}
       <PhotoDrop pasteWhenIdle compact={photos.length > 0} onFiles={upload} label={uploading ? `Uploading ${uploading}…` : 'Drop or paste photos, or'} />
 
       {lightboxIndex !== null && (

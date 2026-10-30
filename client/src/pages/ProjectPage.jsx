@@ -1,3 +1,4 @@
+import { Archive, Download, Plus, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api/index.js';
@@ -9,6 +10,7 @@ import Section from '../components/Section.jsx';
 import { useToasts } from '../components/Toasts.jsx';
 import { BUILTIN_SECTIONS, CUSTOM_KINDS } from '../constants.js';
 import { money } from '../utils/format.js';
+import { colorFor } from '../utils/projectColor.js';
 import { ChecklistSection, EmbedSection, NotesSection, TableSection } from './project/CustomSections.jsx';
 import CustomizeDialog from './project/CustomizeDialog.jsx';
 import FiguresSection from './project/FiguresSection.jsx';
@@ -237,12 +239,12 @@ export default function ProjectPage() {
     if (c) {
       const Body = { notes: NotesSection, checklist: ChecklistSection, table: TableSection, embed: EmbedSection }[c.kind];
       return (
-        <Section id={anchorOf(key)} title={c.title} controls={controls} onRename={(title) => saveSection(c.id, { title })}>
+        <Section id={anchorOf(key)} title={c.title} icon={CUSTOM_KINDS[c.kind].icon} controls={controls} onRename={(title) => saveSection(c.id, { title })}>
           <Body section={c} save={(data) => saveSection(c.id, { data })} />
         </Section>
       );
     }
-    const common = { id: key, title: BUILTIN_SECTIONS[key].label, count: counts[key], controls };
+    const common = { id: key, title: BUILTIN_SECTIONS[key].label, icon: BUILTIN_SECTIONS[key].icon, count: counts[key], controls };
     switch (key) {
       case 'figures':
         return (
@@ -308,17 +310,19 @@ export default function ProjectPage() {
   }
 
   const menuItems = [
-    { label: 'Customize sections…', onClick: () => setDialog('customize') },
+    { label: 'Customize sections…', icon: SlidersHorizontal, onClick: () => setDialog('customize') },
     'divider',
-    { label: 'Export as Markdown', href: api.exports.markdownUrl(id), download: '' },
-    d.purchases.length > 0 && { label: 'Export purchases (CSV)', href: api.exports.purchasesCsvUrl(id), download: '' },
+    { label: 'Export as Markdown', icon: Download, href: api.exports.markdownUrl(id), download: '' },
+    d.purchases.length > 0 && { label: 'Export purchases (CSV)', icon: Download, href: api.exports.purchasesCsvUrl(id), download: '' },
     'divider',
-    project.archived ? { label: 'Restore from archive', onClick: () => setArchived(false) } : { label: 'Archive project', onClick: () => setArchived(true) },
-    { label: 'Delete project…', onClick: () => setDialog('delete'), danger: true },
+    project.archived
+      ? { label: 'Restore from archive', icon: Archive, onClick: () => setArchived(false) }
+      : { label: 'Archive project', icon: Archive, onClick: () => setArchived(true) },
+    { label: 'Delete project…', icon: Trash2, onClick: () => setDialog('delete'), danger: true },
   ];
 
   return (
-    <main className="page project-page">
+    <main className="page project-page" style={{ '--project': colorFor(project) }}>
       <nav className="section-nav" aria-label="Sections">
         <a href="#overview" className={activeSection === 'overview' ? 'active' : ''}>
           Overview
@@ -348,19 +352,24 @@ export default function ProjectPage() {
       )}
 
       <div className="add-section">
-        <span className="muted small">Add a section</span>
+        <span className="add-section-label">
+          <Plus size={15} aria-hidden /> Add a section
+        </span>
         {Object.entries(CUSTOM_KINDS).map(([kind, k]) => (
           <button key={kind} className="chip" onClick={() => addCustom(kind)} title={k.description}>
-            {k.icon} {k.label}
+            <k.icon size={14} aria-hidden /> {k.label}
           </button>
         ))}
         {Object.keys(BUILTIN_SECTIONS)
           .filter((k) => !layout.includes(k))
-          .map((k) => (
-            <button key={k} className="chip" onClick={() => setLayout([...layout, k])} title={`Show ${BUILTIN_SECTIONS[k].label} again`}>
-              + {BUILTIN_SECTIONS[k].label}
-            </button>
-          ))}
+          .map((k) => {
+            const Icon = BUILTIN_SECTIONS[k].icon;
+            return (
+              <button key={k} className="chip dashed" onClick={() => setLayout([...layout, k])} title={`Show ${BUILTIN_SECTIONS[k].label} again`}>
+                <Icon size={14} aria-hidden /> {BUILTIN_SECTIONS[k].label}
+              </button>
+            );
+          })}
       </div>
 
       {dialog === 'customize' && (

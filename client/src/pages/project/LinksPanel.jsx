@@ -1,5 +1,7 @@
+import { Paperclip, Star } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { api } from '../../api/index.js';
+import EmptyState from '../../components/EmptyState.jsx';
 import { useToasts } from '../../components/Toasts.jsx';
 import { LINK_CATEGORIES } from '../../constants.js';
 import { fileSize } from '../../utils/format.js';
@@ -102,7 +104,7 @@ export default function LinksPanel({ projectId, links, setLinks, onChanged }) {
                       title={l.featured ? 'Shown in CAD & drawings — click to hide' : 'Show in CAD & drawings'}
                       aria-pressed={l.featured}
                     >
-                      {l.featured ? '★' : '☆'}
+                      <Star size={14} fill={l.featured ? 'currentColor' : 'none'} />
                     </button>
                   )}
                   <select className="category-pick" value={l.category} onChange={(e) => update(l, { category: e.target.value })} aria-label="Category">
@@ -119,7 +121,11 @@ export default function LinksPanel({ projectId, links, setLinks, onChanged }) {
           </ul>
         </div>
       ))}
-      {links.length === 0 && <p className="empty-state">Datasheets, repos, CAD files — paste a link or drop a file here.</p>}
+      {links.length === 0 && (
+        <EmptyState icon={Paperclip} title="Nothing linked yet">
+          Datasheets, repos, CAD files — paste a link or drop a file here.
+        </EmptyState>
+      )}
 
       <form className="link-form" onSubmit={addUrl}>
         <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Paste a link…" aria-label="URL" />

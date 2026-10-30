@@ -1,6 +1,9 @@
+import { NotebookPen, PenLine } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../../api/index.js';
+import EmptyState from '../../components/EmptyState.jsx';
 import { LOG_TYPES } from '../../constants.js';
+import { celebrate } from '../../utils/celebrate.js';
 import Lightbox from '../../components/Lightbox.jsx';
 import LogEntryForm from '../../components/LogEntryForm.jsx';
 import Markdown from '../../components/Markdown.jsx';
@@ -46,11 +49,13 @@ export default function Notebook({ projectId, entries, setEntries, onChanged, in
             upsert(entry);
             setComposing(false);
             onChanged();
+            if (entry.type === 'Milestone') celebrate();
           }}
         />
       ) : (
         <button className="composer-stub" onClick={() => setComposing(true)}>
-          <span>Write a log entry…</span>
+          <PenLine size={16} aria-hidden />
+          <span>What did you work on?</span>
           <kbd>N</kbd>
         </button>
       )}
@@ -66,7 +71,11 @@ export default function Notebook({ projectId, entries, setEntries, onChanged, in
         </div>
       )}
 
-      {entries.length === 0 && !composing && <p className="empty-state">No entries yet. Paste a photo straight into a new entry.</p>}
+      {entries.length === 0 && !composing && (
+        <EmptyState icon={NotebookPen} title="Your notebook is empty">
+          Log decisions, tests and problems as you go — paste photos straight into an entry.
+        </EmptyState>
+      )}
 
       <ol className="log-list">
         {shown.map((entry) =>

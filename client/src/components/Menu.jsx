@@ -1,7 +1,8 @@
+import { MoreHorizontal } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-// A small dropdown: `items` are { label, onClick, href, download, danger, disabled } or 'divider'.
-export default function Menu({ label = '⋯', title = 'More', items, align = 'right', className = '' }) {
+// A small dropdown: `items` are { label, icon, onClick, href, download, danger, disabled }, 'divider', or null.
+export default function Menu({ label, title = 'More', items, align = 'right', className = '' }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -17,10 +18,17 @@ export default function Menu({ label = '⋯', title = 'More', items, align = 'ri
     };
   }, [open]);
 
+  const content = (item) => (
+    <>
+      {item.icon && <item.icon size={15} strokeWidth={1.75} aria-hidden />}
+      {item.label}
+    </>
+  );
+
   return (
     <div className={`menu ${className}`} ref={ref}>
       <button className="icon-btn" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} title={title} aria-label={title}>
-        {label}
+        {label ?? <MoreHorizontal size={17} />}
       </button>
       {open && (
         <div className={`menu-list align-${align}`} role="menu">
@@ -29,7 +37,7 @@ export default function Menu({ label = '⋯', title = 'More', items, align = 'ri
               <hr key={i} />
             ) : item.href ? (
               <a key={i} role="menuitem" href={item.href} download={item.download} className={item.danger ? 'danger' : ''} onClick={() => setOpen(false)}>
-                {item.label}
+                {content(item)}
               </a>
             ) : (
               <button
@@ -42,7 +50,7 @@ export default function Menu({ label = '⋯', title = 'More', items, align = 'ri
                   item.onClick();
                 }}
               >
-                {item.label}
+                {content(item)}
               </button>
             ),
           )}

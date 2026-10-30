@@ -39,7 +39,8 @@ in 14 days, high-priority tasks, orders on the way), recent activity, a 26-week 
 heatmap and spend by month. **Customize** (top right) turns any of these on or off.
 
 **Projects** — *New project* lets you start from a template (Hardware build, Product,
-Test & analysis, Software, Blank). The ⋯ menu on a project page can **archive** it
+Test & analysis, Software, Blank). Each project gets an accent color (change it with the
+dot next to its status) and generated cover art until you pick a cover photo. The ⋯ menu on a project page can **archive** it
 (hidden from the sidebar and dashboard, nothing deleted — restore it from *Archived* in
 the sidebar), **delete** it (type its name to confirm), or **export** it.
 

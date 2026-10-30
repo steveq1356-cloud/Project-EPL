@@ -1,3 +1,6 @@
+import { ImagePlus } from 'lucide-react';
+import ColorPicker from '../../components/ColorPicker.jsx';
+import CoverArt from '../../components/CoverArt.jsx';
 import DateField from '../../components/DateField.jsx';
 import InlineText from '../../components/InlineText.jsx';
 import Menu from '../../components/Menu.jsx';
@@ -25,11 +28,14 @@ export default function ProjectHeader({ project, stats, save, saveState, menuIte
 
   return (
     <header id="overview" className="project-header">
-      {project.cover && (
-        <a className="project-banner" href="#photos" title="Change the cover in Photos">
-          <img src={project.cover.url} alt={project.cover.caption || ''} />
-        </a>
-      )}
+      <a className="project-banner" href="#photos" title={project.cover ? 'Change the cover in Photos' : 'Add a cover photo in Photos'}>
+        {project.cover ? <img src={project.cover.url} alt={project.cover.caption || ''} /> : <CoverArt project={project} />}
+        {!project.cover && (
+          <span className="banner-hint">
+            <ImagePlus size={15} aria-hidden /> Add a cover photo
+          </span>
+        )}
+      </a>
 
       <div className="project-title-row">
         <h1>
@@ -43,6 +49,7 @@ export default function ProjectHeader({ project, stats, save, saveState, menuIte
             ))}
           </select>
         </label>
+        <ColorPicker project={project} onChange={(color) => save({ color })} />
         {project.archived && <span className="archived-pill">Archived</span>}
         <span className="spacer" />
         <span className={`save-state ${saveState && !['saving', 'saved'].includes(saveState) ? 'error' : ''}`} aria-live="polite">
@@ -62,17 +69,23 @@ export default function ProjectHeader({ project, stats, save, saveState, menuIte
 
       <div className="next-action">
         <span className="next-label">Next action</span>
-        <InlineText value={project.next_action} onSave={(next_action) => save({ next_action })} placeholder="The very next physical step…" />
+        <InlineText value={project.next_action} onSave={(next_action) => save({ next_action })} placeholder="What's the very next physical step?" />
       </div>
 
       <dl className="glance">
         <div>
           <dt>Tasks</dt>
           <dd>
-            <a href="#tasks">
-              {stats.done_tasks} of {tasksTotal} done
-            </a>
-            {tasksTotal > 0 && <Meter value={stats.done_tasks} max={tasksTotal} warnAt={2} label="Tasks done" />}
+            {tasksTotal > 0 ? (
+              <>
+                <a href="#tasks">
+                  {stats.done_tasks} of {tasksTotal} done
+                </a>
+                <Meter value={stats.done_tasks} max={tasksTotal} warnAt={2} label="Tasks done" />
+              </>
+            ) : (
+              <span className="muted">None yet</span>
+            )}
           </dd>
         </div>
         <div>
@@ -81,7 +94,8 @@ export default function ProjectHeader({ project, stats, save, saveState, menuIte
             <a href="#purchases">{money(stats.spent_cents, { whole: stats.spent_cents >= 100000 })}</a>
             {project.budget_cents ? <Meter value={stats.spent_cents} max={project.budget_cents} label="Spent of budget" /> : null}
             <span className="muted small budget-input">
-              Budget $<InlineText value={centsToInput(project.budget_cents)} onSave={(v) => save({ budget: v.replace(/[$,\s]/g, '') || null })} placeholder="none" />
+              {project.budget_cents ? 'of $' : ''}
+              <InlineText value={centsToInput(project.budget_cents)} onSave={(v) => save({ budget: v.replace(/[$,\s]/g, '') || null })} placeholder="Set a budget" />
             </span>
           </dd>
         </div>

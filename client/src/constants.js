@@ -1,3 +1,5 @@
+import { Activity, Box, FileText, Gauge, Globe, Image, Link2, ListChecks, ListTodo, NotebookPen, ShoppingCart, Table2 } from 'lucide-react';
+
 export const PROJECT_STATUSES = ['Active', 'Idea', 'On Hold', 'Done', 'Abandoned'];
 
 export const LOG_TYPES = ['Note', 'Decision', 'Problem', 'Test', 'Idea', 'Milestone'];
@@ -11,24 +13,24 @@ export const LINK_CATEGORIES = ['CAD', 'Code', 'Datasheet', 'Reference'];
 
 // Built-in project page sections. "half" sections sit side by side when next to each other.
 export const BUILTIN_SECTIONS = {
-  figures: { label: 'Key figures', description: 'Headline numbers — loads, tolerances, cost per unit', size: 'full' },
-  notebook: { label: 'Notebook', description: 'Log entries with Markdown and photos', size: 'full' },
-  tasks: { label: 'Tasks', description: 'To-dos with priority and due dates', size: 'half' },
-  links: { label: 'Links & files', description: 'URLs, datasheets, code, CAD files', size: 'half' },
-  viewer: { label: 'CAD & drawings', description: '3D models (STL, STEP…), PDFs and embeds', size: 'full' },
-  photos: { label: 'Photos', description: 'Gallery with captions and a cover photo', size: 'full' },
-  purchases: { label: 'Purchases', description: 'Orders, receipts and spend charts', size: 'full' },
-  activity: { label: 'Activity', description: 'Heatmap and recent changes', size: 'full' },
+  figures: { label: 'Key figures', description: 'Headline numbers — loads, tolerances, cost per unit', size: 'full', icon: Gauge },
+  notebook: { label: 'Notebook', description: 'Log entries with Markdown and photos', size: 'full', icon: NotebookPen },
+  tasks: { label: 'Tasks', description: 'To-dos with priority and due dates', size: 'half', icon: ListTodo },
+  links: { label: 'Links & files', description: 'URLs, datasheets, code, CAD files', size: 'half', icon: Link2 },
+  viewer: { label: 'CAD & drawings', description: '3D models (STL, STEP…), PDFs and embeds', size: 'full', icon: Box },
+  photos: { label: 'Photos', description: 'Gallery with captions and a cover photo', size: 'full', icon: Image },
+  purchases: { label: 'Purchases', description: 'Orders, receipts and spend charts', size: 'full', icon: ShoppingCart },
+  activity: { label: 'Activity', description: 'Heatmap and recent changes', size: 'full', icon: Activity },
 };
 
 export const DEFAULT_LAYOUT = ['figures', 'notebook', 'tasks', 'links', 'viewer', 'photos', 'purchases', 'activity'];
 
 // Sections you can add yourself.
 export const CUSTOM_KINDS = {
-  notes: { label: 'Notes', description: 'A Markdown page — requirements, design notes, lessons learned', size: 'full', icon: '¶' },
-  checklist: { label: 'Checklist', description: 'Assembly steps, test plan, launch list', size: 'half', icon: '☑' },
-  table: { label: 'Data table', description: 'Test data or a BOM — paste from Excel, chart two columns', size: 'full', icon: '▦' },
-  embed: { label: 'Embed', description: 'Any web page or tool — Onshape, Desmos, a dashboard', size: 'full', icon: '⧉' },
+  notes: { label: 'Notes', description: 'A Markdown page — requirements, design notes, lessons learned', size: 'full', icon: FileText },
+  checklist: { label: 'Checklist', description: 'Assembly steps, test plan, launch list', size: 'half', icon: ListChecks },
+  table: { label: 'Data table', description: 'Test data or a BOM — paste from Excel, chart two columns', size: 'full', icon: Table2 },
+  embed: { label: 'Embed', description: 'Any web page or tool — Onshape, Desmos, a dashboard', size: 'full', icon: Globe },
 };
 
 export const PROJECT_TEMPLATES = [

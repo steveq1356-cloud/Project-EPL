@@ -7,7 +7,8 @@ import { createSection } from './sections.js';
 
 export const PROJECT_STATUSES = ['Idea', 'Active', 'On Hold', 'Done', 'Abandoned'];
 
-const EDITABLE = ['name', 'summary', 'goal', 'status', 'start_date', 'target_date', 'next_action', 'tags', 'cover_photo_id', 'budget', 'specs', 'archived', 'layout'];
+const EDITABLE = ['name', 'summary', 'goal', 'status', 'start_date', 'target_date', 'next_action', 'tags', 'cover_photo_id', 'budget', 'specs', 'archived', 'layout', 'color'];
+export const PROJECT_COLORS = ['indigo', 'blue', 'sky', 'teal', 'emerald', 'lime', 'amber', 'orange', 'rose', 'violet'];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const fromRow = (row) =>
@@ -85,6 +86,9 @@ function clean(input, { creating, id }) {
       continue;
     } else if (key === 'specs') {
       value = cleanSpecs(value);
+    } else if (key === 'color') {
+      value = value || null;
+      if (value && !PROJECT_COLORS.includes(value)) throw new ValidationError(`Color must be one of: ${PROJECT_COLORS.join(', ')}`);
     } else if (key === 'archived') {
       value = value ? 1 : 0;
     } else if (key === 'layout') {

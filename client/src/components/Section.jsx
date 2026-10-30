@@ -1,15 +1,20 @@
 import { useState } from 'react';
 import Menu from './Menu.jsx';
 
-// The frame every project-page section sits in: a quiet header (title, count, actions,
-// and a ⋯ menu for moving / hiding / deleting) above one card of content.
-export default function Section({ id, title, count, actions, controls, children, bare = false, onRename }) {
+// The frame every project-page section sits in: an icon, title and count, quiet
+// actions, and a ⋯ menu for moving / hiding / deleting — above one card of content.
+export default function Section({ id, title, icon: Icon, count, actions, controls, children, bare = false, onRename }) {
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraft] = useState(title);
 
   return (
     <section id={id} className="section">
       <header className="section-header">
+        {Icon && (
+          <span className="section-icon" aria-hidden>
+            <Icon size={15} strokeWidth={2} />
+          </span>
+        )}
         {renaming ? (
           <form
             onSubmit={(e) => {

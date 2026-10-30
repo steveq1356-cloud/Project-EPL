@@ -1,4 +1,6 @@
+import { Coffee, Flame, Plus, SlidersHorizontal, Sparkles, Truck } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import EmptyState from '../components/EmptyState.jsx';
 import { Link } from 'react-router-dom';
 import { api } from '../api/index.js';
 import { DASHBOARD_WIDGETS, PROJECT_STATUSES } from '../constants.js';
@@ -8,11 +10,24 @@ import { useData } from '../components/DataContext.jsx';
 import Modal from '../components/Modal.jsx';
 import ProjectCard from '../components/ProjectCard.jsx';
 import { useToasts } from '../components/Toasts.jsx';
-import { localDate, money, monthLabel, shortDate } from '../utils/format.js';
+import { daysBetween, localDate, money, monthLabel, shortDate } from '../utils/format.js';
 
 function greeting() {
   const h = new Date().getHours();
   return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+}
+
+// Consecutive days with activity, ending today (or yesterday, so the streak survives
+// until you've had a chance to work today).
+function streak(byDay) {
+  const d = new Date();
+  if (!byDay[localDate(d)]) d.setDate(d.getDate() - 1);
+  let n = 0;
+  while (byDay[localDate(d)]?.total) {
+    n++;
+    d.setDate(d.getDate() - 1);
+  }
+  return n;
 }
 
 function CustomizeDashboard({ hidden, onChange, onClose }) {
@@ -81,6 +96,8 @@ export default function Dashboard({ onQuickAdd, onNewProject }) {
   }
 
   const lower = [show('upnext') && 'upnext', show('recent') && 'recent'].filter(Boolean);
+  const days = streak(data.activity_by_day);
+  const weekDays = Object.entries(data.activity_by_day).filter(([day, v]) => v.total && daysBetween(day, today) < 7).length;
   const charts = [show('heatmap') && 'heatmap', show('spend') && k.spend_all_time_cents > 0 && 'spend'].filter(Boolean);
 
   return (
@@ -88,14 +105,25 @@ export default function Dashboard({ onQuickAdd, onNewProject }) {
       <header className="page-head">
         <div>
           <h1>{greeting()}</h1>
-          <p className="muted">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+          <p className="head-sub">
+            <span className="muted">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+            {days >= 2 ? (
+              <span className="streak" title="Days in a row with something logged">
+                <Flame size={14} aria-hidden /> {days}-day streak
+              </span>
+            ) : weekDays > 0 ? (
+              <span className="streak calm" title="Days with activity in the last week">
+                <Sparkles size={14} aria-hidden /> Active {weekDays} of the last 7 days
+              </span>
+            ) : null}
+          </p>
         </div>
         <div className="page-head-actions">
-          <button className="link-btn" onClick={() => setCustomizing(true)}>
-            Customize
+          <button className="btn btn-ghost" onClick={() => setCustomizing(true)}>
+            <SlidersHorizontal size={15} aria-hidden /> Customize
           </button>
           <button className="btn btn-primary" onClick={onNewProject}>
-            New project
+            <Plus size={15} aria-hidden /> New project
           </button>
         </div>
       </header>
@@ -143,7 +171,10 @@ export default function Dashboard({ onQuickAdd, onNewProject }) {
               <ProjectCard key={p.id} project={p} />
             ))}
             <button className="project-card new-card" onClick={onNewProject}>
-              + New project
+              <span className="new-card-icon" aria-hidden>
+                <Plus size={20} />
+              </span>
+              New project
             </button>
           </div>
         </section>
@@ -160,7 +191,7 @@ export default function Dashboard({ onQuickAdd, onNewProject }) {
                 </button>
               </div>
               <div className="card-plain">
-                {tasksAhead.length === 0 && data.in_transit.length === 0 && <p className="empty-state">Nothing due in the next two weeks.</p>}
+                {tasksAhead.length === 0 && data.in_transit.length === 0 && <EmptyState icon={Coffee} title="Nothing due in the next two weeks" />}
                 {tasksAhead.length > 0 && (
                   <ul className="task-list">
                     {tasksAhead.map((t) => {
@@ -187,7 +218,7 @@ export default function Dashboard({ onQuickAdd, onNewProject }) {
                       {data.in_transit.map((p) => (
                         <li key={p.id} className="task-row">
                           <span className="transit-icon" aria-hidden>
-                            ⇢
+                            <Truck size={15} />
                           </span>
                           <Link to={`/projects/${p.project_id}#purchase-${p.id}`} className="task-title">
                             {p.item}

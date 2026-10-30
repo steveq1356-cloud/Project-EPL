@@ -1,3 +1,4 @@
+import { FileText, FolderOpen, Image, Link2, ListTodo, NotebookPen, ShoppingCart } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/index.js';
@@ -6,16 +7,19 @@ import { useData } from './DataContext.jsx';
 import Modal from './Modal.jsx';
 
 const KINDS = {
-  project: { label: 'Projects', icon: '▣' },
-  log: { label: 'Log entries', icon: '✎' },
-  task: { label: 'Tasks', icon: '☐' },
-  purchase: { label: 'Purchases', icon: '$' },
-  link: { label: 'Links & files', icon: '↗' },
-  photo: { label: 'Photos', icon: '▨' },
+  project: { label: 'Projects', icon: FolderOpen },
+  log: { label: 'Log entries', icon: NotebookPen },
+  task: { label: 'Tasks', icon: ListTodo },
+  section: { label: 'Notes, checklists & tables', icon: FileText },
+  purchase: { label: 'Purchases', icon: ShoppingCart },
+  link: { label: 'Links & files', icon: Link2 },
+  photo: { label: 'Photos', icon: Image },
 };
 
+const sectionAnchor = (r) => (r.kind === 'section' ? `#section-${r.id}` : null);
+
 // Where a result lives on its project page (the page scrolls to and highlights it).
-const anchor = (r) => (r.kind === 'project' ? '' : `#${r.kind}-${r.id}`);
+const anchor = (r) => (r.kind === 'project' ? '' : sectionAnchor(r) ?? `#${r.kind}-${r.id}`);
 
 // Wraps each matched term in <mark>. Text is rendered as React children, never as HTML.
 function Highlight({ text, terms }) {
@@ -97,7 +101,10 @@ export default function SearchPalette({ onClose }) {
               return (
                 <button key={`${r.kind}-${r.id}`} className={`search-result ${i === active ? 'active' : ''}`} onMouseEnter={() => setActive(i)} onClick={() => go(r)}>
                   <span className="search-icon" aria-hidden>
-                    {KINDS[r.kind].icon}
+                    {(() => {
+                      const Icon = KINDS[r.kind].icon;
+                      return <Icon size={14} />;
+                    })()}
                   </span>
                   <span className="search-text">
                     <span className="search-title">

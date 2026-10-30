@@ -1,5 +1,8 @@
+import { ListTodo, PartyPopper } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../../api/index.js';
+import EmptyState from '../../components/EmptyState.jsx';
+import { celebrate, originOf } from '../../utils/celebrate.js';
 import InlineText from '../../components/InlineText.jsx';
 import TaskForm from '../../components/TaskForm.jsx';
 import { useToasts } from '../../components/Toasts.jsx';
@@ -55,6 +58,8 @@ export default function TasksPanel({ projectId, tasks, setTasks, onChanged }) {
       const saved = await api.tasks.update(task.id, fields);
       setTasks((list) => sortTasks(list.map((t) => (t.id === saved.id ? saved : t))));
       onChanged();
+      // Checking off the last open task earns a little confetti.
+      if (fields.done && open.length === 1 && open[0].id === task.id) celebrate(originOf(document.getElementById(`task-${task.id}`)));
     } catch (e) {
       setTasks((list) => list.map((t) => (t.id === task.id ? task : t)));
       notify(e.message, { error: true });
@@ -74,6 +79,8 @@ export default function TasksPanel({ projectId, tasks, setTasks, onChanged }) {
 
   return (
     <div className="tasks">
+      {tasks.length === 0 && <EmptyState icon={ListTodo} title="No tasks yet" />}
+      {tasks.length > 0 && open.length === 0 && <EmptyState icon={PartyPopper} title="All done!" />}
       <ul className="task-list">
         {open.map((t) => (
           <TaskRow key={t.id} task={t} onUpdate={update} onRemove={remove} />

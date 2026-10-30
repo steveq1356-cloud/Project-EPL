@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
 // Native <dialog>: focus trapping, Esc to close and the backdrop come for free.
@@ -25,8 +26,8 @@ export default function Modal({ title, onClose, children, wide = false, classNam
       <div className="modal-body">
         <header className="modal-header">
           <h2>{title}</h2>
-          <button className="btn btn-ghost" onClick={onClose} aria-label="Close">
-            ✕
+          <button className="icon-btn" onClick={onClose} aria-label="Close">
+            <X size={17} />
           </button>
         </header>
         {children}

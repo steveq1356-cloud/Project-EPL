@@ -1,5 +1,7 @@
+import { ShoppingCart } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { api } from '../../api/index.js';
+import EmptyState from '../../components/EmptyState.jsx';
 import { BarList, ChartCard, LineChart, Meter } from '../../components/charts/Charts.jsx';
 import PurchaseForm from '../../components/PurchaseForm.jsx';
 import { useToasts } from '../../components/Toasts.jsx';
@@ -164,13 +166,17 @@ export default function PurchasesSection({ project, purchases, setPurchases, onC
       )}
 
       {purchases.length === 0 && !formOpen && (
-        <p className="empty-state">
-          No purchases yet.{' '}
-          <button className="link-btn" onClick={() => setFormOpen(true)}>
-            Add the first one
-          </button>{' '}
-          or press <kbd>P</kbd> anywhere.
-        </p>
+        <EmptyState
+          icon={ShoppingCart}
+          title="No purchases yet"
+          action={
+            <button className="btn btn-small" onClick={() => setFormOpen(true)}>
+              Add a purchase
+            </button>
+          }
+        >
+          Track parts, receipts and spend — or press <kbd>P</kbd> from anywhere.
+        </EmptyState>
       )}
 
       {purchases.length > 0 && (

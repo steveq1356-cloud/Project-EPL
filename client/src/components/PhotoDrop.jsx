@@ -1,3 +1,4 @@
+import { ImagePlus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 const isImage = (file) => file.type.startsWith('image/');
@@ -19,7 +20,9 @@ export default function PhotoDrop({ onFiles, label = 'Drop photos here, paste, o
       const scope = rootRef.current?.closest('form') ?? rootRef.current;
       const active = document.activeElement;
       const idle = !active || active === document.body;
-      if (!scope?.contains(active) && !(idle && pasteWhenIdle)) return;
+      // An open log-entry form gets idle pastes ahead of the Photos section.
+      const formElsewhere = !rootRef.current?.closest('form') && document.querySelector('form.log-form');
+      if (!scope?.contains(active) && !(idle && pasteWhenIdle && !formElsewhere)) return;
       e.preventDefault();
       onFilesRef.current(files.map(named));
     }
@@ -47,8 +50,9 @@ export default function PhotoDrop({ onFiles, label = 'Drop photos here, paste, o
         accept(e.dataTransfer.files);
       }}
     >
-      <span className="muted">{label}</span>{' '}
-      <button type="button" className="btn btn-small" onClick={() => inputRef.current.click()}>
+      <ImagePlus size={16} className="photo-drop-icon" aria-hidden />
+      <span>{label}</span>{' '}
+      <button type="button" className="link-btn" onClick={() => inputRef.current.click()}>
         choose files
       </button>
       <input
