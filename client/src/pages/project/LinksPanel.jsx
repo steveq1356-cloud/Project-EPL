@@ -1,11 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { api } from '../../api/index.js';
-import FileDrop from '../../components/FileDrop.jsx';
 import { useToasts } from '../../components/Toasts.jsx';
 import { LINK_CATEGORIES } from '../../constants.js';
 import { fileSize } from '../../utils/format.js';
-
-const ICONS = { CAD: '◳', Code: '</>', Datasheet: '▤', Reference: '↗' };
 
 const guessCategory = (name) => {
   const ext = name.split('.').pop().toLowerCase();
@@ -17,22 +14,22 @@ const guessCategory = (name) => {
 
 const guessUrlCategory = (url) => (/github\.com|gitlab|\.io\//i.test(url) ? 'Code' : /onshape|autodesk|a360|grabcad|thingiverse|printables/i.test(url) ? 'CAD' : 'Reference');
 
-export const canFeature = (link) => !link.file || ['model', 'pdf', 'image'].includes(link.file.kind);
+const host = (url) => url.replace(/^https?:\/\/(www\.)?/, '').split(/[/?#]/)[0];
 
 export default function LinksPanel({ projectId, links, setLinks, onChanged }) {
   const { notify, deleteWithUndo } = useToasts();
   const [url, setUrl] = useState('');
-  const [label, setLabel] = useState('');
   const [uploading, setUploading] = useState(0);
+  const [over, setOver] = useState(false);
+  const fileInput = useRef(null);
 
   async function addUrl(e) {
     e.preventDefault();
     if (!url.trim()) return;
     try {
-      const link = await api.links.create(projectId, { url, label: label || url.replace(/^https?:\/\//, '').split(/[/?#]/)[0], category: guessUrlCategory(url) });
+      const link = await api.links.create(projectId, { url, label: host(url.startsWith('http') ? url : `https://${url}`), category: guessUrlCategory(url) });
       setLinks((list) => [...list, link]);
       setUrl('');
-      setLabel('');
       onChanged();
     } catch (err) {
       notify(err.message, { error: true });
@@ -74,61 +71,45 @@ export default function LinksPanel({ projectId, links, setLinks, onChanged }) {
   const groups = LINK_CATEGORIES.map((c) => ({ category: c, items: links.filter((l) => l.category === c) })).filter((g) => g.items.length);
 
   return (
-    <section className="card panel links-panel" id="links">
-      <header className="panel-head">
-        <h3>Links & files</h3>
-        <span className="muted small">{links.length}</span>
-      </header>
-
-      <form className="link-form" onSubmit={addUrl}>
-        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Paste a URL (Onshape, GitHub, datasheet…)" aria-label="URL" />
-        {url && <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Label (optional)" aria-label="Label" />}
-        <button className="btn" disabled={!url.trim()}>
-          Add
-        </button>
-      </form>
-      <FileDrop onFiles={addFiles} className="compact">
-        <span className="muted small">{uploading ? `Uploading ${uploading}…` : 'Drop files (CAD, PDFs, code) or click to choose'}</span>
-      </FileDrop>
-
+    <div
+      className={`links ${over ? 'drop-over' : ''}`}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setOver(false);
+        if (e.dataTransfer.files.length) addFiles([...e.dataTransfer.files]);
+      }}
+    >
       {groups.map((g) => (
         <div key={g.category} className="link-group">
-          <div className="link-group-label">
-            <span aria-hidden>{ICONS[g.category]}</span> {g.category}
-          </div>
+          <div className="group-label">{g.category}</div>
           <ul className="link-list">
             {g.items.map((l) => (
               <li key={l.id} id={`link-${l.id}`} className="link-row">
                 <a href={l.file ? l.file.url : l.url} target="_blank" rel="noreferrer" className="link-label" title={l.notes || l.url || l.file?.original_name}>
                   {l.label}
                 </a>
-                <span className="link-meta">
-                  {l.file ? (
-                    <>
-                      <span className="chip-static">{l.file.ext || 'file'}</span>
-                      <span className="muted small">{fileSize(l.file.size_bytes)}</span>
-                      <a className="link-btn" href={l.file.download_url} title="Download">
-                        ⤓
-                      </a>
-                    </>
-                  ) : (
-                    <span className="muted small link-host">{l.url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}</span>
+                <span className="link-meta">{l.file ? `${l.file.ext.toUpperCase()} · ${fileSize(l.file.size_bytes)}` : host(l.url)}</span>
+                <span className="row-tools">
+                  {(!l.file || ['model', 'pdf', 'image'].includes(l.file.kind)) && (
+                    <button
+                      className={`star ${l.featured ? 'on' : ''}`}
+                      onClick={() => update(l, { featured: !l.featured })}
+                      title={l.featured ? 'Shown in CAD & drawings — click to hide' : 'Show in CAD & drawings'}
+                      aria-pressed={l.featured}
+                    >
+                      {l.featured ? '★' : '☆'}
+                    </button>
                   )}
                   <select className="category-pick" value={l.category} onChange={(e) => update(l, { category: e.target.value })} aria-label="Category">
                     {LINK_CATEGORIES.map((c) => (
                       <option key={c}>{c}</option>
                     ))}
                   </select>
-                  {canFeature(l) && (
-                    <button
-                      className={`star ${l.featured ? 'on' : ''}`}
-                      onClick={() => update(l, { featured: !l.featured })}
-                      title={l.featured ? 'Shown in the CAD & drawings viewer — click to hide' : 'Show in the CAD & drawings viewer'}
-                      aria-pressed={l.featured}
-                    >
-                      {l.featured ? '★' : '☆'}
-                    </button>
-                  )}
                   <button className="row-remove" onClick={() => remove(l)} aria-label={`Remove ${l.label}`}>
                     ×
                   </button>
@@ -138,6 +119,25 @@ export default function LinksPanel({ projectId, links, setLinks, onChanged }) {
           </ul>
         </div>
       ))}
-    </section>
+      {links.length === 0 && <p className="empty-state">Datasheets, repos, CAD files — paste a link or drop a file here.</p>}
+
+      <form className="link-form" onSubmit={addUrl}>
+        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Paste a link…" aria-label="URL" />
+        {url && <button className="btn btn-small btn-primary">Add</button>}
+        <button type="button" className="link-btn" onClick={() => fileInput.current.click()}>
+          {uploading ? `Uploading ${uploading}…` : 'Upload file'}
+        </button>
+        <input
+          ref={fileInput}
+          type="file"
+          multiple
+          hidden
+          onChange={(e) => {
+            if (e.target.files.length) addFiles([...e.target.files]);
+            e.target.value = '';
+          }}
+        />
+      </form>
+    </div>
   );
 }

@@ -310,6 +310,111 @@ export function LineChart({ points, format, height = 180, reference, emptyText =
   );
 }
 
+// ---- X–Y line with markers (numeric x, e.g. load vs deflection) ----
+
+const fmtNum = (v) => {
+  const a = Math.abs(v);
+  if (a >= 10000) return `${(v / 1000).toFixed(a >= 100000 ? 0 : 1)}k`;
+  if (a >= 100) return v.toFixed(0);
+  if (a >= 10) return v.toFixed(1).replace(/\.0$/, '');
+  return String(Number(v.toPrecision(3)));
+};
+
+function niceRange(min, max, count = 5) {
+  if (min === max) {
+    const pad = Math.abs(min) || 1;
+    min -= pad;
+    max += pad;
+  }
+  const raw = (max - min) / count;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw);
+  const lo = Math.floor(min / step) * step;
+  const hi = Math.ceil(max / step) * step;
+  const ticks = [];
+  for (let v = lo; v <= hi + step * 0.001; v += step) ticks.push(Number(v.toPrecision(12)));
+  return { lo, hi, ticks };
+}
+
+export function XYChart({ points, xLabel, yLabel, height = 240 }) {
+  const [ref, width] = useWidth();
+  const [hover, setHover] = useState(null);
+  const pad = { top: 12, right: 16, bottom: 40, left: 56 };
+  const data = [...points].sort((a, b) => a.x - b.x);
+
+  if (data.length < 2) {
+    return (
+      <div className="viz viz-empty-frame" style={{ height: 120 }} ref={ref}>
+        <p className="muted">Enter at least two rows of numbers to see the chart</p>
+      </div>
+    );
+  }
+
+  const xr = niceRange(Math.min(...data.map((p) => p.x)), Math.max(...data.map((p) => p.x)));
+  const yr = niceRange(Math.min(0, ...data.map((p) => p.y)), Math.max(...data.map((p) => p.y)));
+  const innerW = Math.max(0, width - pad.left - pad.right);
+  const innerH = height - pad.top - pad.bottom;
+  const x = (v) => pad.left + ((v - xr.lo) / (xr.hi - xr.lo)) * innerW;
+  const y = (v) => pad.top + innerH - ((v - yr.lo) / (yr.hi - yr.lo)) * innerH;
+  const path = data.map((p, i) => `${i ? 'L' : 'M'}${x(p.x)},${y(p.y)}`).join(' ');
+
+  function onMove(e) {
+    const box = ref.current.getBoundingClientRect();
+    const px = e.clientX - box.left;
+    let best = 0;
+    data.forEach((p, i) => {
+      if (Math.abs(x(p.x) - px) < Math.abs(x(data[best].x) - px)) best = i;
+    });
+    setHover(best);
+  }
+  const hp = hover !== null ? data[hover] : null;
+
+  return (
+    <div className="viz" ref={ref} onPointerMove={onMove} onPointerLeave={() => setHover(null)}>
+      {width > 0 && (
+        <svg width={width} height={height} role="img" aria-label={`${yLabel} versus ${xLabel}`}>
+          {yr.ticks.map((t) => (
+            <g key={`y${t}`}>
+              <line className="viz-grid" x1={pad.left} x2={width - pad.right} y1={y(t)} y2={y(t)} />
+              <text className="viz-tick" x={pad.left - 6} y={y(t)} dy="0.32em" textAnchor="end">
+                {fmtNum(t)}
+              </text>
+            </g>
+          ))}
+          {xr.ticks.map((t) => (
+            <text key={`x${t}`} className="viz-tick" x={x(t)} y={pad.top + innerH + 14} textAnchor="middle">
+              {fmtNum(t)}
+            </text>
+          ))}
+          <line className="viz-axis" x1={pad.left} x2={width - pad.right} y1={pad.top + innerH} y2={pad.top + innerH} />
+          <text className="viz-axis-title" x={pad.left + innerW / 2} y={height - 4} textAnchor="middle">
+            {xLabel}
+          </text>
+          <text className="viz-axis-title" transform={`translate(12 ${pad.top + innerH / 2}) rotate(-90)`} textAnchor="middle">
+            {yLabel}
+          </text>
+          <path className="viz-line" d={path} />
+          {data.map((p, i) => (
+            <circle key={i} className="viz-dot" cx={x(p.x)} cy={y(p.y)} r={hover === i ? 5 : 3.5} />
+          ))}
+          {hp && <line className="viz-crosshair" x1={x(hp.x)} x2={x(hp.x)} y1={pad.top} y2={pad.top + innerH} />}
+        </svg>
+      )}
+      {hp && (
+        <div className="viz-tooltip" style={{ left: Math.min(width - 160, Math.max(0, x(hp.x) + 10)), top: Math.max(0, y(hp.y) - 40) }}>
+          <div className="viz-tooltip-row">
+            <strong>{hp.y}</strong>
+            <span className="viz-tooltip-label">{yLabel}</span>
+          </div>
+          <div className="viz-tooltip-title">
+            at {hp.x} {xLabel}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---- horizontal bars (rank a handful of categories) ----
 
 export function BarList({ items, format, max: maxItems = 6, onSelect }) {

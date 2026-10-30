@@ -1,20 +1,37 @@
 import { getDb } from '../db/connection.js';
 import { ValidationError } from '../errors.js';
+import { BUILTIN_SECTIONS, DEFAULT_LAYOUT, TEMPLATES } from '../layout.js';
 import { removeUploadFiles } from '../uploads.js';
 import { getPhoto } from './photos.js';
+import { createSection } from './sections.js';
 
 export const PROJECT_STATUSES = ['Idea', 'Active', 'On Hold', 'Done', 'Abandoned'];
 
-const EDITABLE = ['name', 'summary', 'goal', 'status', 'start_date', 'target_date', 'next_action', 'tags', 'cover_photo_id', 'budget', 'specs'];
+const EDITABLE = ['name', 'summary', 'goal', 'status', 'start_date', 'target_date', 'next_action', 'tags', 'cover_photo_id', 'budget', 'specs', 'archived', 'layout'];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const fromRow = (row) =>
   row && {
     ...row,
+    archived: Boolean(row.archived),
     tags: JSON.parse(row.tags),
     specs: JSON.parse(row.specs),
+    layout: row.layout ? JSON.parse(row.layout) : DEFAULT_LAYOUT,
     cover: row.cover_photo_id ? getPhoto(row.cover_photo_id) : null,
   };
+
+// A layout is an ordered list of built-in section keys and "custom:<id>" keys for this project.
+function cleanLayout(value, projectId) {
+  if (!Array.isArray(value)) throw new ValidationError('layout must be a list');
+  const own = new Set(getDb().prepare('SELECT id FROM sections WHERE project_id = ?').all(projectId).map((r) => `custom:${r.id}`));
+  const seen = new Set();
+  const out = value.filter((key) => {
+    const ok = (BUILTIN_SECTIONS.includes(key) || own.has(key)) && !seen.has(key);
+    seen.add(key);
+    return ok;
+  });
+  return JSON.stringify(out);
+}
 
 // Key figures: [{ label, value, unit?, note? }] — e.g. "Peak stress", "0.90", "MPa".
 function cleanSpecs(value) {
@@ -68,6 +85,11 @@ function clean(input, { creating, id }) {
       continue;
     } else if (key === 'specs') {
       value = cleanSpecs(value);
+    } else if (key === 'archived') {
+      value = value ? 1 : 0;
+    } else if (key === 'layout') {
+      if (creating) continue; // set after the project (and its custom sections) exist
+      value = cleanLayout(value, id);
     } else {
       value = String(value ?? '');
     }
@@ -85,13 +107,37 @@ export function getProject(id) {
   return fromRow(getDb().prepare('SELECT * FROM projects WHERE id = ?').get(id));
 }
 
+// `template` (see layout.js) picks the starting sections; custom ones are created here.
 export function createProject(input) {
   const fields = clean(input, { creating: true });
-  const cols = Object.keys(fields);
-  const { lastInsertRowid } = getDb()
-    .prepare(`INSERT INTO projects (${cols.join(', ')}) VALUES (${cols.map((c) => '@' + c).join(', ')})`)
-    .run(fields);
-  return getProject(lastInsertRowid);
+  const template = TEMPLATES[input.template] ?? TEMPLATES.hardware;
+  const db = getDb();
+  return db.transaction(() => {
+    const cols = Object.keys(fields);
+    const { lastInsertRowid: id } = db
+      .prepare(`INSERT INTO projects (${cols.join(', ')}) VALUES (${cols.map((c) => '@' + c).join(', ')})`)
+      .run(fields);
+    const layout = [...template.layout];
+    for (const s of template.sections) {
+      const section = createSection(id, s);
+      const at = layout.indexOf(s.after);
+      layout.splice(at >= 0 ? at + 1 : layout.length, 0, `custom:${section.id}`);
+    }
+    db.prepare('UPDATE projects SET layout = ? WHERE id = ?').run(JSON.stringify(layout), id);
+    return getProject(id);
+  })();
+}
+
+// Adds a section key to the project's layout (at `index`, or at the end).
+export function addToLayout(id, key, index = null) {
+  const layout = getProject(id).layout.filter((k) => k !== key);
+  layout.splice(index ?? layout.length, 0, key);
+  getDb().prepare('UPDATE projects SET layout = ? WHERE id = ?').run(JSON.stringify(layout), id);
+}
+
+export function removeFromLayout(id, key) {
+  const layout = getProject(id).layout.filter((k) => k !== key);
+  getDb().prepare('UPDATE projects SET layout = ? WHERE id = ?').run(JSON.stringify(layout), id);
 }
 
 export function updateProject(id, input) {

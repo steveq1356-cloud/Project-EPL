@@ -1,10 +1,10 @@
 # EPL — Engineering Project Log
 
-A private, local dashboard for personal engineering projects. Every project gets one
-open page — title block, key figures, notebook, tasks, spend, links, a CAD / drawing
-viewer, photos, purchases and activity — so you can see everything without clicking
-through tabs. It runs only on your laptop (`127.0.0.1`), has no login, and keeps
-everything in one SQLite file plus an uploads folder.
+A private, local dashboard for personal engineering projects. Every project is one
+open page made of sections you choose — notebook, tasks, key figures, a CAD / drawing
+viewer, photos, purchases, plus your own notes, checklists, data tables and embeds.
+It runs only on your laptop (`127.0.0.1`), has no login, and keeps everything in one
+SQLite file plus an uploads folder.
 
 ## Requirements
 
@@ -33,27 +33,46 @@ from other devices on your network.
 
 ## What's where
 
-**Dashboard** — KPI row (active projects, spend this month and all-time, open tasks,
-log entries), spend-by-month chart, a 26-week activity heatmap, project cards (cover,
-status, next action, spend, task progress, last update, a *stale* flag on Active
-projects quiet for 21+ days), recent activity, tasks due in the next 14 days,
-orders in transit, and spend by project.
+**Dashboard** — headline numbers, project cards (cover, status, next action, open
+tasks, last update; Active projects quiet for 21+ days are marked), *Up next* (tasks due
+in 14 days, high-priority tasks, orders on the way), recent activity, a 26-week activity
+heatmap and spend by month. **Customize** (top right) turns any of these on or off.
 
-**Project page** (one scrolling page, with a sticky section bar):
+**Projects** — *New project* lets you start from a template (Hardware build, Product,
+Test & analysis, Software, Blank). The ⋯ menu on a project page can **archive** it
+(hidden from the sidebar and dashboard, nothing deleted — restore it from *Archived* in
+the sidebar), **delete** it (type its name to confirm), or **export** it.
 
-| Section | What it holds |
+**Project page** — a header (cover banner, name, status, summary, goal, tags, the
+**next action**, and tasks / spend / timeline / last activity at a glance) followed by
+the sections you've chosen. Every section has a ⋯ menu to move it up or down, hide it,
+or (for ones you added) rename or delete it; **Customize** in the section bar does it
+all in one place. Hiding a built-in section keeps its data.
+
+| Built-in section | What it holds |
 | --- | --- |
-| Title block | Cover photo, name, status, tags, summary, **next action**, goal, start/target dates with a timeline, budget, spend |
-| Key figures | Your own headline numbers (design load, peak stress, cost per unit…) plus live spend-vs-budget and task progress |
-| Notebook | Log entries (Note / Decision / Problem / Test / Idea / Milestone) in Markdown with photos, filterable by type |
-| Side panels | Tasks (priority, due dates), spend summary, links & files |
-| CAD & drawings | 3D viewer and document viewer — see below |
-| Photos | Gallery with captions, dates, cover selection, link to a log entry |
-| Purchases | Full table with inline status, receipts, cumulative spend vs budget, spend by category and vendor |
-| Activity | Heatmap and recent changes for this project |
+| Key figures | Your headline numbers — design load, peak stress, cost per unit… |
+| Notebook | Log entries (Note / Decision / Problem / Test / Idea / Milestone) in Markdown with photos |
+| Tasks | To-dos with priority (click the dot to change) and due dates |
+| Links & files | URLs, datasheets, code and CAD files; ☆ puts one in the viewer |
+| CAD & drawings | 3D viewer, PDFs and embeds — see below |
+| Photos | Gallery; open a photo to edit its caption, date, log entry, or make it the cover |
+| Purchases | Orders with status, receipts, spend vs budget and spend charts |
+| Activity | Heatmap and recent changes |
 
-Everything is edited in place — click a field, type, press Enter. Deletes show an
-**Undo** for a few seconds.
+| Sections you add | What they're for |
+| --- | --- |
+| Notes | A Markdown page — requirements, design notes, lessons learned |
+| Checklist | Assembly steps, a test plan, a launch list |
+| Data table | Test data or a BOM. **Paste straight from Excel/Sheets** — a header row like `Load (N)` becomes the column name and unit. Pick two numeric columns to chart them; each column shows mean and range |
+| Embed | Any web page or tool (Onshape, Desmos, a dashboard) |
+
+Everything is edited in place — click a field, type, press Enter. Custom sections save
+as you type. Deletes show an **Undo** for a few seconds.
+
+**Export** — ⋯ → *Export as Markdown* downloads the whole project (overview, figures,
+notebook, tasks, purchases, links, your sections) as one `.md` file; *Export purchases*
+downloads a CSV that opens in Excel.
 
 ## CAD & drawings viewer
 
@@ -134,6 +153,7 @@ refuses to run while the app is still running.
 ```
 server/              Express API (localhost only)
   db/migrations/     numbered .sql files, applied automatically on startup
+  layout.js          built-in sections, the default page layout, and project templates
   repos/             the only code that runs SQL (insights.js: dashboard, search, activity)
   routes/            REST endpoints that call repos/
 client/              React + Vite UI

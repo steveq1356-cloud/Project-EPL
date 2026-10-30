@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/index.js';
-import { PROJECT_STATUSES } from '../constants.js';
+import { PROJECT_STATUSES, PROJECT_TEMPLATES } from '../constants.js';
+import { localDate } from '../utils/format.js';
 import { useData } from './DataContext.jsx';
 import Modal from './Modal.jsx';
 
@@ -10,7 +11,7 @@ export default function NewProjectDialog({ onClose }) {
   const { changed } = useData();
   const [name, setName] = useState('');
   const [status, setStatus] = useState('Active');
-  const [summary, setSummary] = useState('');
+  const [template, setTemplate] = useState('hardware');
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -19,7 +20,7 @@ export default function NewProjectDialog({ onClose }) {
     setSaving(true);
     setError(null);
     try {
-      const project = await api.projects.create({ name, status, summary, start_date: status === 'Active' ? new Date().toISOString().slice(0, 10) : null });
+      const project = await api.projects.create({ name, status, template, start_date: status === 'Active' ? localDate() : null });
       changed();
       onClose();
       navigate(`/projects/${project.id}`);
@@ -44,12 +45,19 @@ export default function NewProjectDialog({ onClose }) {
             ))}
           </select>
         </label>
-        <label>
-          <span>
-            Summary <span className="muted">(optional)</span>
-          </span>
-          <input value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="One line about what it is" />
-        </label>
+        <fieldset className="template-picker">
+          <legend>Start from</legend>
+          {PROJECT_TEMPLATES.map((t) => (
+            <label key={t.id} className={`template-option ${template === t.id ? 'selected' : ''}`}>
+              <input type="radio" name="template" value={t.id} checked={template === t.id} onChange={() => setTemplate(t.id)} />
+              <span>
+                <strong>{t.label}</strong>
+                <span className="muted small">{t.description}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+        <p className="muted small">You can add, hide and reorder sections any time.</p>
         {error && <p className="error">{error}</p>}
         <div className="form-actions">
           <button type="button" className="btn" onClick={onClose}>

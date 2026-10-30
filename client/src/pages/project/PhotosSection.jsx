@@ -6,14 +6,13 @@ import PhotoDrop from '../../components/PhotoDrop.jsx';
 import { useToasts } from '../../components/Toasts.jsx';
 
 const byNewest = (a, b) => b.taken_on.localeCompare(a.taken_on) || b.id - a.id;
-const COLLAPSED = 12;
+const COLLAPSED = 10;
 
 export default function PhotosSection({ project, photos, setPhotos, entries, save, onChanged }) {
   const { notify, deleteWithUndo } = useToasts();
   const [uploading, setUploading] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState(null);
   const [expanded, setExpanded] = useState(false);
-  const entryTitle = Object.fromEntries(entries.map((e) => [e.id, e.title]));
 
   async function upload(files) {
     setUploading((n) => n + files.length);
@@ -55,74 +54,79 @@ export default function PhotosSection({ project, photos, setPhotos, entries, sav
   }
 
   const shown = expanded ? photos : photos.slice(0, COLLAPSED);
+  const setCover = (photo) => save({ cover_photo_id: project.cover_photo_id === photo.id ? null : photo.id });
 
   return (
-    <section id="photos" className="card photos-section">
-      <header className="panel-head">
-        <h2>
-          <span className="section-num">04</span> Photos
-        </h2>
-        <span className="muted small">{photos.length}</span>
-      </header>
-
-      <PhotoDrop pasteWhenIdle onFiles={upload} label={uploading ? `Uploading ${uploading}…` : 'Drop photos here, paste a screenshot (Ctrl+V), or'} />
-
+    <div className="photos">
       {photos.length > 0 && (
         <div className="photo-grid">
           {shown.map((photo, i) => {
             const isCover = project.cover_photo_id === photo.id;
             return (
-              <figure key={photo.id} id={`photo-${photo.id}`} className={`photo-card ${isCover ? 'is-cover' : ''}`}>
-                <button className="photo-card-img" onClick={() => setLightboxIndex(i)} title="View full size">
+              <figure key={photo.id} id={`photo-${photo.id}`} className="photo-tile">
+                <button className="photo-tile-img" onClick={() => setLightboxIndex(i)} title="Open">
                   <img src={photo.thumb_url} alt={photo.caption || photo.original_name} loading="lazy" />
-                  {isCover && <span className="cover-badge">Cover</span>}
                 </button>
-                <figcaption>
-                  <InlineText value={photo.caption} onSave={(caption) => update(photo, { caption })} placeholder="Add caption…" />
-                  <div className="photo-meta">
-                    <input
-                      type="date"
-                      className="inline-date small"
-                      value={photo.taken_on}
-                      onChange={(e) => e.target.value && update(photo, { taken_on: e.target.value })}
-                      aria-label="Photo date"
-                    />
-                    <select
-                      className="inline-select small"
-                      value={photo.log_entry_id ?? ''}
-                      onChange={(e) => update(photo, { log_entry_id: e.target.value ? Number(e.target.value) : null })}
-                      aria-label="Linked log entry"
-                      title={photo.log_entry_id ? `Linked to: ${entryTitle[photo.log_entry_id]}` : 'Not linked to a log entry'}
-                    >
-                      <option value="">No log entry</option>
-                      {entries.map((e) => (
-                        <option key={e.id} value={e.id}>
-                          {e.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="photo-actions">
-                    <button className="btn btn-small btn-ghost" onClick={() => save({ cover_photo_id: isCover ? null : photo.id })}>
-                      {isCover ? 'Remove cover' : 'Set as cover'}
-                    </button>
-                    <button className="btn btn-small btn-ghost danger-text" onClick={() => remove(photo)}>
-                      Delete
-                    </button>
-                  </div>
-                </figcaption>
+                <span className="photo-tile-tools">
+                  <button className={`tile-tool ${isCover ? 'on' : ''}`} onClick={() => setCover(photo)} title={isCover ? 'Cover photo — click to unset' : 'Use as cover'}>
+                    {isCover ? '★' : '☆'}
+                  </button>
+                  <button className="tile-tool" onClick={() => remove(photo)} title="Delete photo" aria-label="Delete photo">
+                    ×
+                  </button>
+                </span>
+                {photo.caption && <figcaption>{photo.caption}</figcaption>}
               </figure>
             );
           })}
         </div>
       )}
       {photos.length > COLLAPSED && (
-        <button className="btn show-more" onClick={() => setExpanded((x) => !x)}>
+        <button className="show-more" onClick={() => setExpanded((x) => !x)}>
           {expanded ? 'Show fewer' : `Show all ${photos.length} photos`}
         </button>
       )}
 
-      {lightboxIndex !== null && <Lightbox photos={shown} startIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />}
-    </section>
+      <PhotoDrop pasteWhenIdle compact={photos.length > 0} onFiles={upload} label={uploading ? `Uploading ${uploading}…` : 'Drop or paste photos, or'} />
+
+      {lightboxIndex !== null && (
+        <Lightbox
+          photos={shown}
+          startIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          details={(photo) => (
+            <div className="photo-details">
+              <label>
+                <span className="muted small">Caption</span>
+                <InlineText value={photo.caption} onSave={(caption) => update(photo, { caption })} placeholder="Add a caption…" multiline />
+              </label>
+              <label>
+                <span className="muted small">Date</span>
+                <input type="date" className="inline-date" value={photo.taken_on} onChange={(e) => e.target.value && update(photo, { taken_on: e.target.value })} />
+              </label>
+              <label>
+                <span className="muted small">Log entry</span>
+                <select className="inline-select" value={photo.log_entry_id ?? ''} onChange={(e) => update(photo, { log_entry_id: e.target.value ? Number(e.target.value) : null })}>
+                  <option value="">None</option>
+                  {entries.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="photo-detail-actions">
+                <button className="btn btn-small" onClick={() => setCover(photo)}>
+                  {project.cover_photo_id === photo.id ? 'Remove as cover' : 'Use as cover'}
+                </button>
+                <button className="btn btn-small btn-danger" onClick={() => remove(photo)}>
+                  Delete
+                </button>
+              </div>
+            </div>
+          )}
+        />
+      )}
+    </div>
   );
 }

@@ -15,8 +15,7 @@ const sortTasks = (list) =>
   );
 
 function TaskRow({ task, onUpdate, onRemove }) {
-  const today = localDate();
-  const overdue = !task.done && task.due_date && task.due_date < today;
+  const overdue = !task.done && task.due_date && task.due_date < localDate();
   return (
     <li id={`task-${task.id}`} className={`task-row ${task.done ? 'done' : ''}`}>
       <input type="checkbox" checked={task.done} onChange={() => onUpdate(task, { done: !task.done })} aria-label={task.done ? 'Mark not done' : 'Mark done'} />
@@ -24,19 +23,18 @@ function TaskRow({ task, onUpdate, onRemove }) {
         <InlineText value={task.title} onSave={(title) => onUpdate(task, { title })} required />
       </span>
       <span className="task-meta">
+        {!task.done && (
+          <label className={`due-pick ${overdue ? 'overdue' : ''} ${task.due_date ? '' : 'empty'}`} title="Due date">
+            <span>{task.due_date ? `${overdue ? 'Overdue · ' : ''}${shortDate(task.due_date)}` : 'Due…'}</span>
+            <input type="date" value={task.due_date ?? ''} onChange={(e) => onUpdate(task, { due_date: e.target.value || null })} />
+          </label>
+        )}
         <button
-          className={`priority-pick p-${task.priority.toLowerCase()}`}
+          className={`priority-flag p-${task.priority.toLowerCase()}`}
           onClick={() => onUpdate(task, { priority: PRIORITIES[(PRIORITIES.indexOf(task.priority) + 1) % PRIORITIES.length] })}
           title={`${task.priority} priority — click to change`}
           aria-label={`${task.priority} priority`}
-        >
-          <span className="priority-dot" />
-          {task.priority[0]}
-        </button>
-        <label className={`due-pick ${overdue ? 'overdue' : ''} ${task.due_date ? '' : 'empty'}`} title="Due date">
-          <span>{task.done ? shortDate(task.completed_at) : task.due_date ? `${overdue ? 'Overdue · ' : ''}${shortDate(task.due_date)}` : 'due'}</span>
-          {!task.done && <input type="date" value={task.due_date ?? ''} onChange={(e) => onUpdate(task, { due_date: e.target.value || null })} />}
-        </label>
+        />
         <button className="row-remove" onClick={() => onRemove(task)} aria-label={`Delete ${task.title}`}>
           ×
         </button>
@@ -75,13 +73,12 @@ export default function TasksPanel({ projectId, tasks, setTasks, onChanged }) {
   }
 
   return (
-    <section className="card panel tasks-panel" id="tasks">
-      <header className="panel-head">
-        <h3>Tasks</h3>
-        <span className="muted small">
-          {open.length} open · {done.length} done
-        </span>
-      </header>
+    <div className="tasks">
+      <ul className="task-list">
+        {open.map((t) => (
+          <TaskRow key={t.id} task={t} onUpdate={update} onRemove={remove} />
+        ))}
+      </ul>
       <TaskForm
         projectId={projectId}
         onSaved={(t) => {
@@ -89,16 +86,10 @@ export default function TasksPanel({ projectId, tasks, setTasks, onChanged }) {
           onChanged();
         }}
       />
-      {open.length === 0 && <p className="muted small empty-state">Nothing open.</p>}
-      <ul className="task-list">
-        {open.map((t) => (
-          <TaskRow key={t.id} task={t} onUpdate={update} onRemove={remove} />
-        ))}
-      </ul>
       {done.length > 0 && (
         <>
-          <button className="link-btn" onClick={() => setShowDone((s) => !s)}>
-            {showDone ? 'Hide' : 'Show'} {done.length} done
+          <button className="show-more left" onClick={() => setShowDone((s) => !s)}>
+            {showDone ? 'Hide' : 'Show'} {done.length} completed
           </button>
           {showDone && (
             <ul className="task-list">
@@ -109,6 +100,6 @@ export default function TasksPanel({ projectId, tasks, setTasks, onChanged }) {
           )}
         </>
       )}
-    </section>
+    </div>
   );
 }

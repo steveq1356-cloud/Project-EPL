@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { BrowserRouter, Link, Route, Routes, useMatch, useNavigate } from 'react-router-dom';
-import { PROJECT_STATUSES } from './constants.js';
 import { useShortcuts, SHORTCUTS } from './hooks/useShortcuts.js';
 import { useTheme } from './hooks/useTheme.js';
 import { DataProvider, useData } from './components/DataContext.jsx';
@@ -8,7 +7,7 @@ import Modal from './components/Modal.jsx';
 import NewProjectDialog from './components/NewProjectDialog.jsx';
 import QuickAdd from './components/QuickAdd.jsx';
 import SearchPalette from './components/SearchPalette.jsx';
-import Sidebar from './components/Sidebar.jsx';
+import Sidebar, { sidebarOrder } from './components/Sidebar.jsx';
 import { ToastProvider } from './components/Toasts.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import ProjectPage from './pages/ProjectPage.jsx';
@@ -23,8 +22,7 @@ function Shell() {
   const [navOpen, setNavOpen] = useState(false);
 
   const quickAdd = (kind) => setDialog({ quickAdd: kind });
-  const ordered = PROJECT_STATUSES.flatMap((s) => projects.filter((p) => p.status === s));
-  const goto = Object.fromEntries(ordered.slice(0, 9).map((p, i) => [`g ${i + 1}`, () => navigate(`/projects/${p.id}`)]));
+  const goto = Object.fromEntries(sidebarOrder(projects).slice(0, 9).map((p, i) => [`g ${i + 1}`, () => navigate(`/projects/${p.id}`)]));
 
   useShortcuts({
     '/': () => setDialog('search'),

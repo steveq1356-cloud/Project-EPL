@@ -37,6 +37,25 @@ export const restBackend = {
   dashboard: () => request('GET', '/dashboard'),
   search: (q) => request('GET', `/search?q=${encodeURIComponent(q)}`),
 
+  settings: {
+    get: () => request('GET', '/settings'),
+    update: (values) => request('PATCH', '/settings', values),
+  },
+
+  // Custom project sections (notes, checklist, table, embed).
+  sections: {
+    list: (projectId) => request('GET', `/projects/${projectId}/sections`),
+    // Returns { section, project } — the project's layout now includes the new section.
+    create: (projectId, fields) => request('POST', `/projects/${projectId}/sections`, fields),
+    update: (id, fields) => request('PATCH', `/sections/${id}`, fields),
+    remove: (id) => request('DELETE', `/sections/${id}`),
+  },
+
+  exports: {
+    markdownUrl: (projectId) => `/api/projects/${projectId}/export.md`,
+    purchasesCsvUrl: (projectId) => `/api/projects/${projectId}/purchases.csv`,
+  },
+
   projects: {
     list: () => request('GET', '/projects'),
     get: (id) => request('GET', `/projects/${id}`),

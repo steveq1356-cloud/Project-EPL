@@ -1,74 +1,87 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { PROJECT_STATUSES } from '../constants.js';
 import { useData } from './DataContext.jsx';
 import { statusClass } from './StatusBadge.jsx';
 
+export const sidebarOrder = (projects) =>
+  projects.filter((p) => !p.archived).sort((a, b) => PROJECT_STATUSES.indexOf(a.status) - PROJECT_STATUSES.indexOf(b.status) || a.name.localeCompare(b.name));
+
+function ProjectLink({ p }) {
+  return (
+    <NavLink to={`/projects/${p.id}`} className="nav-item project-link" title={p.stale ? `${p.status} · quiet for ${p.stats.days_since_activity} days` : p.status}>
+      <span className={`status-dot ${statusClass(p.status)}`} aria-hidden />
+      <span className="nav-label">{p.name}</span>
+      {p.stale && <span className="stale-dot" aria-label="stale" />}
+    </NavLink>
+  );
+}
+
 // Always-visible project list so any project is one click away.
 export default function Sidebar({ onNewProject, onSearch, onQuickAdd, onHelp, theme, onTheme, open, onClose }) {
   const { projects } = useData();
-  const groups = PROJECT_STATUSES.map((status) => ({ status, items: projects.filter((p) => p.status === status) })).filter((g) => g.items.length);
+  const [showArchived, setShowArchived] = useState(false);
+  const live = sidebarOrder(projects);
+  const archived = projects.filter((p) => p.archived);
 
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`} onClick={(e) => e.target.closest('a') && onClose()}>
-      <div className="sidebar-brand">
-        <NavLink to="/" className="brand-mark" aria-label="Dashboard">
-          <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden>
-            <rect width="32" height="32" rx="6" className="brand-bg" />
-            <path d="M8 9h16M8 16h16M8 23h10" className="brand-lines" />
-          </svg>
-          <span>
-            <strong>EPL</strong>
-            <small>Engineering Project Log</small>
+      <NavLink to="/" className="brand" aria-label="Dashboard">
+        <span className="brand-mark" aria-hidden>
+          EPL
+        </span>
+        <span className="brand-name">Project Log</span>
+      </NavLink>
+
+      <button className="search-trigger" onClick={onSearch}>
+        <span>Search</span>
+        <kbd>/</kbd>
+      </button>
+
+      <nav className="nav">
+        <NavLink to="/" end className="nav-item">
+          <span className="nav-icon" aria-hidden>
+            ⌂
           </span>
+          <span className="nav-label">Dashboard</span>
         </NavLink>
-      </div>
-
-      <div className="sidebar-actions">
-        <button className="sidebar-search" onClick={onSearch}>
-          <span>Search…</span>
-          <kbd>/</kbd>
+        <button className="nav-item" onClick={onQuickAdd}>
+          <span className="nav-icon" aria-hidden>
+            +
+          </span>
+          <span className="nav-label">Quick add</span>
+          <kbd>N</kbd>
         </button>
-        <button className="btn btn-primary sidebar-add" onClick={onQuickAdd}>
-          + Quick add <kbd>N</kbd>
-        </button>
-      </div>
 
-      <nav className="sidebar-nav">
-        <NavLink to="/" end className="sidebar-link">
-          <span className="sidebar-icon" aria-hidden>▦</span> Dashboard
-        </NavLink>
-
-        {groups.map((g) => (
-          <div key={g.status} className="sidebar-group">
-            <div className="sidebar-group-label">
-              {g.status} <span>{g.items.length}</span>
-            </div>
-            {g.items.map((p) => (
-              <NavLink key={p.id} to={`/projects/${p.id}`} className="sidebar-link project-link">
-                <span className={`status-dot ${statusClass(p.status)}`} aria-hidden />
-                <span className="sidebar-project-name">{p.name}</span>
-                {p.stale && (
-                  <span className="stale-mark" title={`No activity for ${p.stats.days_since_activity} days`}>
-                    stale
-                  </span>
-                )}
-                {p.stats.open_tasks > 0 && !p.stale && <span className="sidebar-count">{p.stats.open_tasks}</span>}
-              </NavLink>
-            ))}
-          </div>
+        <div className="nav-heading">
+          <span>Projects</span>
+          <button className="icon-btn small" onClick={onNewProject} title="New project" aria-label="New project">
+            +
+          </button>
+        </div>
+        {live.map((p) => (
+          <ProjectLink key={p.id} p={p} />
         ))}
 
-        <button className="sidebar-link sidebar-new" onClick={onNewProject}>
-          <span className="sidebar-icon" aria-hidden>+</span> New project
-        </button>
+        {archived.length > 0 && (
+          <>
+            <button className="nav-heading as-button" onClick={() => setShowArchived((s) => !s)} aria-expanded={showArchived}>
+              <span>Archived</span>
+              <span>
+                {archived.length} {showArchived ? '▾' : '▸'}
+              </span>
+            </button>
+            {showArchived && archived.map((p) => <ProjectLink key={p.id} p={p} />)}
+          </>
+        )}
       </nav>
 
       <footer className="sidebar-footer">
-        <button className="link-btn" onClick={onTheme} title="Switch theme (system → light → dark)">
-          Theme: {theme}
+        <button className="link-btn muted-link" onClick={onTheme} title="Theme: system → light → dark">
+          {theme === 'dark' ? '☾ Dark' : theme === 'light' ? '☀ Light' : '◐ Auto'}
         </button>
-        <button className="link-btn" onClick={onHelp}>
-          Shortcuts <kbd>?</kbd>
+        <button className="link-btn muted-link" onClick={onHelp}>
+          Shortcuts
         </button>
       </footer>
     </aside>

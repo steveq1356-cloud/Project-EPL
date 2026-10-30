@@ -127,26 +127,39 @@ export default function ViewerSection({ projectId, links, setLinks, onChanged })
     setLinks((list) => list.map((l) => (l.id === saved.id ? saved : l)));
   }
 
+  const actions = (
+    <div className="viewer-actions">
+      <FileDrop onFiles={upload} accept={MODEL_ACCEPT} className="inline">
+        <span className="link-btn">{uploading ? `Uploading ${uploading}…` : 'Add file'}</span>
+      </FileDrop>
+      <button className="link-btn" onClick={() => setEmbedOpen((o) => !o)}>
+        Embed link
+      </button>
+      {active && (
+        <button className="link-btn" onClick={() => setFull((f) => !f)} title="Fill the screen (Esc to exit)">
+          {full ? 'Exit full screen' : 'Full screen'}
+        </button>
+      )}
+    </div>
+  );
+
   return (
-    <section id="viewer" className={`card viewer-section ${full ? 'fullscreen' : ''}`}>
-      <header className="panel-head">
-        <h2>
-          <span className="section-num">03</span> CAD & drawings
-        </h2>
-        <div className="viewer-actions">
-          <button className="btn btn-small" onClick={() => setEmbedOpen((o) => !o)}>
-            + Embed URL
-          </button>
-          <FileDrop onFiles={upload} accept={MODEL_ACCEPT} className="inline">
-            <span className="btn btn-small">{uploading ? `Uploading ${uploading}…` : '+ Add model / drawing'}</span>
-          </FileDrop>
-          {active && (
-            <button className="btn btn-small" onClick={() => setFull((f) => !f)} title="Fill the screen (Esc to exit)">
-              {full ? 'Exit full screen' : 'Full screen'}
-            </button>
-          )}
+    <div className={`viewer ${full ? 'fullscreen' : ''}`}>
+      {items.length > 0 ? (
+        <div className="viewer-bar">
+          <div className="viewer-tabs" role="tablist">
+            {items.map((l) => (
+              <button key={l.id} role="tab" aria-selected={active?.id === l.id} className={active?.id === l.id ? 'active' : ''} onClick={() => setActiveId(l.id)}>
+                {l.label}
+                <span className="tab-ext">{l.file ? l.file.ext : 'web'}</span>
+              </button>
+            ))}
+          </div>
+          {actions}
         </div>
-      </header>
+      ) : (
+        <div className="viewer-bar end">{actions}</div>
+      )}
 
       {embedOpen && (
         <form className="embed-form" onSubmit={addEmbed}>
@@ -163,19 +176,11 @@ export default function ViewerSection({ projectId, links, setLinks, onChanged })
             <path d="M20 28 L20 56 L60 76 L60 48" />
             <path d="M100 28 L100 56 L60 76" />
           </svg>
-          <strong>Drop a CAD model or drawing here</strong>
-          <span className="muted small">STL · STEP · IGES · OBJ · GLB · 3MF · PDF — or embed an Onshape/Fusion link. Files you star ☆ in Links & files show up here too.</span>
+          <strong>Drop a CAD model or drawing</strong>
+          <span className="muted small">STL, STEP, IGES, OBJ, GLB, 3MF or PDF — or embed an Onshape / Fusion 360 link</span>
         </FileDrop>
       ) : (
         <>
-          <div className="viewer-tabs" role="tablist">
-            {items.map((l) => (
-              <button key={l.id} role="tab" aria-selected={active?.id === l.id} className={`viewer-tab ${active?.id === l.id ? 'active' : ''}`} onClick={() => setActiveId(l.id)}>
-                <span className="chip-static">{l.file ? l.file.ext : 'web'}</span>
-                {l.label}
-              </button>
-            ))}
-          </div>
           {active && (
             <div className="viewer-stage">
               <ViewerPane link={active} />
@@ -202,6 +207,6 @@ export default function ViewerSection({ projectId, links, setLinks, onChanged })
           )}
         </>
       )}
-    </section>
+    </div>
   );
 }

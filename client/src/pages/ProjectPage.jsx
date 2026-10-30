@@ -1,73 +1,43 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api/index.js';
 import ActivityFeed from '../components/ActivityFeed.jsx';
-import { BarList, ChartCard, Heatmap, heatmapTable, Meter } from '../components/charts/Charts.jsx';
+import { Heatmap } from '../components/charts/Charts.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { useData } from '../components/DataContext.jsx';
-import { PROJECT_SECTIONS, SPENT_STATUSES } from '../constants.js';
-import { money, plural } from '../utils/format.js';
-import KeyFigures from './project/KeyFigures.jsx';
+import Section from '../components/Section.jsx';
+import { useToasts } from '../components/Toasts.jsx';
+import { BUILTIN_SECTIONS, CUSTOM_KINDS } from '../constants.js';
+import { money } from '../utils/format.js';
+import { ChecklistSection, EmbedSection, NotesSection, TableSection } from './project/CustomSections.jsx';
+import CustomizeDialog from './project/CustomizeDialog.jsx';
+import FiguresSection from './project/FiguresSection.jsx';
 import LinksPanel from './project/LinksPanel.jsx';
 import Notebook from './project/Notebook.jsx';
 import PhotosSection from './project/PhotosSection.jsx';
+import ProjectHeader from './project/ProjectHeader.jsx';
 import PurchasesSection from './project/PurchasesSection.jsx';
 import TasksPanel from './project/TasksPanel.jsx';
-import TitleBlock from './project/TitleBlock.jsx';
 import ViewerSection from './project/ViewerSection.jsx';
 
-const EMPTY = { project: null, log: null, tasks: null, purchases: null, links: null, photos: null, insights: null };
+const EMPTY = { project: null, log: null, tasks: null, purchases: null, links: null, photos: null, sections: null, insights: null };
 
-// Side-column spend summary; the full table lives in the Purchases section.
-function SpendPanel({ project, purchases, onAdd }) {
-  const spent = purchases.filter((p) => SPENT_STATUSES.includes(p.status));
-  const spentCents = spent.reduce((s, p) => s + p.total_cents, 0);
-  const planned = purchases.filter((p) => p.status === 'Planned');
-  const transit = purchases.filter((p) => p.status === 'Ordered');
-  const byCategory = Object.entries(
-    spent.reduce((m, p) => ({ ...m, [p.category || 'Uncategorized']: (m[p.category || 'Uncategorized'] ?? 0) + p.total_cents }), {}),
-  )
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => b.value - a.value);
+const DEFAULT_DATA = {
+  notes: { body: '' },
+  checklist: { items: [] },
+  table: { columns: [{ name: 'X', unit: '' }, { name: 'Y', unit: '' }], rows: [['', ''], ['', '']], chart: null },
+  embed: { url: '', height: 560 },
+};
 
-  return (
-    <section className="card panel spend-panel">
-      <header className="panel-head">
-        <h3>Spend</h3>
-        <button className="btn btn-small" onClick={onAdd}>
-          + Purchase
-        </button>
-      </header>
-      <div className="spend-hero">
-        <span className="spend-value">{money(spentCents)}</span>
-        {project.budget_cents ? (
-          <span className="muted small">of {money(project.budget_cents, { whole: true })} budget</span>
-        ) : (
-          <span className="muted small">{plural(spent.length, 'order')}</span>
-        )}
-      </div>
-      {project.budget_cents ? <Meter value={spentCents} max={project.budget_cents} label="Spent of budget" /> : null}
-      <dl className="mini-stats">
-        <div>
-          <dt>Planned</dt>
-          <dd>{money(planned.reduce((s, p) => s + p.total_cents, 0), { whole: true })}</dd>
-        </div>
-        <div>
-          <dt>In transit</dt>
-          <dd>{transit.length}</dd>
-        </div>
-        <div>
-          <dt>Items</dt>
-          <dd>{purchases.length}</dd>
-        </div>
-      </dl>
-      {byCategory.length > 0 && <BarList items={byCategory} max={4} format={(v, s) => money(v, { whole: true, compact: s })} />}
-      {purchases.length > 0 && (
-        <a className="link-btn" href="#purchases">
-          All purchases & charts ↓
-        </a>
-      )}
-    </section>
-  );
+// Groups the layout into rows: consecutive "half" sections share a row.
+function toRows(layout, sizeOf) {
+  const rows = [];
+  for (const key of layout) {
+    const last = rows.at(-1);
+    if (sizeOf(key) === 'half' && last?.length === 1 && sizeOf(last[0]) === 'half') last.push(key);
+    else rows.push([key]);
+  }
+  return rows;
 }
 
 export default function ProjectPage() {
@@ -76,16 +46,18 @@ export default function ProjectPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { changed: globalChanged } = useData();
+  const { notify } = useToasts();
   const [d, setD] = useState(EMPTY);
   const [error, setError] = useState(null);
   const [saveState, setSaveState] = useState(null);
   const [purchaseFormOpen, setPurchaseFormOpen] = useState(false);
+  const [dialog, setDialog] = useState(null); // 'customize' | 'delete' | { deleteSection }
   const [activeSection, setActiveSection] = useState('overview');
   const scrolledFor = useRef(null);
 
-  // Old tab URLs (/projects/3/log) now jump to that section on the one page.
+  // Old tab URLs (/projects/3/log) jump to that section on the one page.
   useEffect(() => {
-    if (tab) navigate(`/projects/${id}#${tab === 'log' ? 'notebook' : tab === 'links' ? 'links' : tab}`, { replace: true });
+    if (tab) navigate(`/projects/${id}#${tab === 'log' ? 'notebook' : tab}`, { replace: true });
   }, [tab]);
 
   const set = (key) => (value) => setD((prev) => ({ ...prev, [key]: typeof value === 'function' ? value(prev[key]) : value }));
@@ -100,6 +72,7 @@ export default function ProjectPage() {
     purchases: () => api.purchases.list(id),
     links: () => api.links.list(id),
     photos: () => api.photos.list(id),
+    sections: () => api.sections.list(id),
     insights: () => api.projects.insights(id),
   };
   const reload = (...keys) => Promise.all(keys.map((k) => loaders[k]().then(S[k]))).catch(() => {});
@@ -113,21 +86,16 @@ export default function ProjectPage() {
       .catch((e) => setError(e.message));
   }, [id]);
 
-  // Quick add (from the sidebar or a shortcut) added something to this project.
+  // Quick add (sidebar or shortcut) added something to this project.
   useEffect(() => {
-    const onAdded = (e) => {
-      if (e.detail.projectId !== id) return;
-      reload(e.detail.list, 'insights', 'photos');
-    };
+    const onAdded = (e) => e.detail.projectId === id && reload(e.detail.list, 'insights', 'photos');
     window.addEventListener('epl:added', onAdded);
     return () => window.removeEventListener('epl:added', onAdded);
   }, [id]);
 
-  // Something changed in a section: refresh the numbers that depend on it.
   const onChanged = useCallback(
     (opts = {}) => {
-      reload('insights', 'photos', ...(opts.project ? ['project'] : []));
-      if (opts.log) reload('log');
+      reload('insights', 'photos', ...(opts.project ? ['project'] : []), ...(opts.log ? ['log'] : []));
       globalChanged();
     },
     [id],
@@ -176,7 +144,7 @@ export default function ProjectPage() {
     });
   }, [loaded, location.key, location.hash]);
 
-  // Highlight the section-nav item for the section on screen.
+  // Highlight the nav item for the section on screen.
   useEffect(() => {
     if (!loaded) return;
     const io = new IntersectionObserver(
@@ -184,14 +152,11 @@ export default function ProjectPage() {
         const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
         if (visible) setActiveSection(visible.target.id);
       },
-      { rootMargin: '-80px 0px -60% 0px' },
+      { rootMargin: '-80px 0px -65% 0px' },
     );
-    PROJECT_SECTIONS.forEach((s) => {
-      const el = document.getElementById(s.id);
-      if (el) io.observe(el);
-    });
+    document.querySelectorAll('.project-page .section, .project-header').forEach((el) => io.observe(el));
     return () => io.disconnect();
-  }, [loaded]);
+  }, [loaded, d.project?.layout?.join()]);
 
   if (error) {
     return (
@@ -201,90 +166,236 @@ export default function ProjectPage() {
           <button className="btn" onClick={() => window.location.reload()}>
             Try again
           </button>{' '}
-          <Link to="/">← Back to dashboard</Link>
+          <Link to="/">Back to dashboard</Link>
         </p>
       </main>
     );
   }
   if (!loaded) return <main className="page muted">Loading…</main>;
 
-  const { project, insights } = d;
+  const { project, insights, sections } = d;
   const stats = insights.stats;
+  const custom = Object.fromEntries(sections.map((s) => [`custom:${s.id}`, s]));
+  const layout = project.layout.filter((k) => BUILTIN_SECTIONS[k] || custom[k]);
+  const sizeOf = (key) => BUILTIN_SECTIONS[key]?.size ?? CUSTOM_KINDS[custom[key]?.kind]?.size ?? 'full';
+  const anchorOf = (key) => (key.startsWith('custom:') ? `section-${key.slice(7)}` : key);
+
+  const setLayout = (next) => save({ layout: next });
+
+  async function addCustom(kind) {
+    const title = CUSTOM_KINDS[kind].label === 'Data table' ? 'Data' : CUSTOM_KINDS[kind].label;
+    const { section, project: p } = await api.sections.create(id, { kind, title, data: DEFAULT_DATA[kind] });
+    S.sections((list) => [...list, section]);
+    S.project(p);
+    setDialog(null);
+    requestAnimationFrame(() => document.getElementById(`section-${section.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }
+
+  async function saveSection(sectionId, fields) {
+    try {
+      const saved = await api.sections.update(sectionId, fields);
+      S.sections((list) => list.map((s) => (s.id === saved.id ? saved : s)));
+    } catch (e) {
+      notify(e.message, { error: true });
+    }
+  }
+
+  async function deleteSection(section) {
+    await api.sections.remove(section.id);
+    S.sections((list) => list.filter((s) => s.id !== section.id));
+    S.project((p) => ({ ...p, layout: p.layout.filter((k) => k !== `custom:${section.id}`) }));
+    notify(`Deleted “${section.title}”`);
+  }
+
+  async function setArchived(archived) {
+    await save({ archived });
+    notify(archived ? `${project.name} archived — find it under Archived in the sidebar` : `${project.name} restored`);
+  }
+
   const counts = {
     notebook: d.log.length,
-    viewer: d.links.filter((l) => l.featured).length,
-    photos: d.photos.length,
-    purchases: d.purchases.length,
+    tasks: stats.open_tasks || null,
+    links: d.links.length || null,
+    photos: d.photos.length || null,
+    purchases: d.purchases.length ? money(stats.spent_cents, { whole: true }) : null,
   };
 
-  async function removeProject() {
-    const typed = window.prompt(
-      `Delete "${project.name}" and everything in it (log, purchases, tasks, photos, files)?\n\nThis can't be undone. Type the project name to confirm:`,
-    );
-    if (typed?.trim() !== project.name) return;
-    await api.projects.remove(project.id);
-    globalChanged();
-    navigate('/');
+  function controlsFor(key, i) {
+    const c = custom[key];
+    return {
+      up: i > 0 ? () => setLayout(layout.map((k, j) => (j === i - 1 ? key : j === i ? layout[i - 1] : k))) : null,
+      down: i < layout.length - 1 ? () => setLayout(layout.map((k, j) => (j === i + 1 ? key : j === i ? layout[i + 1] : k))) : null,
+      hide: c ? null : () => setLayout(layout.filter((k) => k !== key)),
+      remove: c ? () => setDialog({ deleteSection: c }) : null,
+    };
   }
+
+  function renderSection(key) {
+    const i = layout.indexOf(key);
+    const controls = controlsFor(key, i);
+    const c = custom[key];
+    if (c) {
+      const Body = { notes: NotesSection, checklist: ChecklistSection, table: TableSection, embed: EmbedSection }[c.kind];
+      return (
+        <Section id={anchorOf(key)} title={c.title} controls={controls} onRename={(title) => saveSection(c.id, { title })}>
+          <Body section={c} save={(data) => saveSection(c.id, { data })} />
+        </Section>
+      );
+    }
+    const common = { id: key, title: BUILTIN_SECTIONS[key].label, count: counts[key], controls };
+    switch (key) {
+      case 'figures':
+        return (
+          <Section {...common} bare>
+            <FiguresSection project={project} save={save} />
+          </Section>
+        );
+      case 'notebook':
+        return (
+          <Section {...common}>
+            <Notebook projectId={id} entries={d.log} setEntries={S.log} onChanged={onChanged} initialExpanded={location.hash.startsWith('#log-')} />
+          </Section>
+        );
+      case 'tasks':
+        return (
+          <Section {...common}>
+            <TasksPanel projectId={id} tasks={d.tasks} setTasks={S.tasks} onChanged={onChanged} />
+          </Section>
+        );
+      case 'links':
+        return (
+          <Section {...common}>
+            <LinksPanel projectId={id} links={d.links} setLinks={S.links} onChanged={onChanged} />
+          </Section>
+        );
+      case 'viewer':
+        return (
+          <Section {...common}>
+            <ViewerSection projectId={id} links={d.links} setLinks={S.links} onChanged={onChanged} />
+          </Section>
+        );
+      case 'photos':
+        return (
+          <Section {...common}>
+            <PhotosSection project={project} photos={d.photos} setPhotos={S.photos} entries={d.log} save={save} onChanged={onChanged} />
+          </Section>
+        );
+      case 'purchases':
+        return (
+          <Section
+            {...common}
+            actions={
+              <button className="link-btn" onClick={() => setPurchaseFormOpen((o) => !o)}>
+                {purchaseFormOpen ? 'Close' : 'Add purchase'}
+              </button>
+            }
+          >
+            <PurchasesSection project={project} purchases={d.purchases} setPurchases={S.purchases} onChanged={onChanged} formOpen={purchaseFormOpen} setFormOpen={setPurchaseFormOpen} />
+          </Section>
+        );
+      case 'activity':
+        return (
+          <Section {...common}>
+            <div className="activity">
+              <Heatmap byDay={insights.activity_by_day} />
+              <ActivityFeed items={insights.recent.slice(0, 6)} showProject={false} />
+            </div>
+          </Section>
+        );
+      default:
+        return null;
+    }
+  }
+
+  const menuItems = [
+    { label: 'Customize sections…', onClick: () => setDialog('customize') },
+    'divider',
+    { label: 'Export as Markdown', href: api.exports.markdownUrl(id), download: '' },
+    d.purchases.length > 0 && { label: 'Export purchases (CSV)', href: api.exports.purchasesCsvUrl(id), download: '' },
+    'divider',
+    project.archived ? { label: 'Restore from archive', onClick: () => setArchived(false) } : { label: 'Archive project', onClick: () => setArchived(true) },
+    { label: 'Delete project…', onClick: () => setDialog('delete'), danger: true },
+  ];
 
   return (
     <main className="page project-page">
       <nav className="section-nav" aria-label="Sections">
-        <Link to="/" className="section-nav-back">
-          ← Dashboard
-        </Link>
-        <span className="section-nav-name">{project.name}</span>
-        {PROJECT_SECTIONS.map((s) => (
-          <a key={s.id} href={`#${s.id}`} className={activeSection === s.id ? 'active' : ''}>
-            {s.label}
-            {counts[s.id] ? <span className="count">{counts[s.id]}</span> : null}
+        <a href="#overview" className={activeSection === 'overview' ? 'active' : ''}>
+          Overview
+        </a>
+        {layout.map((key) => (
+          <a key={key} href={`#${anchorOf(key)}`} className={activeSection === anchorOf(key) ? 'active' : ''}>
+            {BUILTIN_SECTIONS[key]?.label ?? custom[key].title}
           </a>
         ))}
+        <button className="section-nav-edit" onClick={() => setDialog('customize')}>
+          Customize
+        </button>
       </nav>
 
-      <TitleBlock project={project} stats={stats} save={save} saveState={saveState} />
-      <KeyFigures project={project} stats={stats} save={save} />
+      <ProjectHeader project={project} stats={stats} save={save} saveState={saveState} menuItems={menuItems} />
 
-      <div className="project-grid-main">
-        <Notebook projectId={id} entries={d.log} setEntries={S.log} onChanged={onChanged} initialExpanded={location.hash.startsWith('#log-')} />
-        <aside className="project-side">
-          <TasksPanel projectId={id} tasks={d.tasks} setTasks={S.tasks} onChanged={onChanged} />
-          <SpendPanel
-            project={project}
-            purchases={d.purchases}
-            onAdd={() => {
-              setPurchaseFormOpen(true);
-              requestAnimationFrame(() => document.getElementById('purchases')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-            }}
-          />
-          <LinksPanel projectId={id} links={d.links} setLinks={S.links} onChanged={onChanged} />
-        </aside>
+      {toRows(layout, sizeOf).map((row) =>
+        row.length === 2 ? (
+          <div key={row.join()} className="section-pair">
+            {row.map((key) => (
+              <Fragment key={key}>{renderSection(key)}</Fragment>
+            ))}
+          </div>
+        ) : (
+          <Fragment key={row[0]}>{renderSection(row[0])}</Fragment>
+        ),
+      )}
+
+      <div className="add-section">
+        <span className="muted small">Add a section</span>
+        {Object.entries(CUSTOM_KINDS).map(([kind, k]) => (
+          <button key={kind} className="chip" onClick={() => addCustom(kind)} title={k.description}>
+            {k.icon} {k.label}
+          </button>
+        ))}
+        {Object.keys(BUILTIN_SECTIONS)
+          .filter((k) => !layout.includes(k))
+          .map((k) => (
+            <button key={k} className="chip" onClick={() => setLayout([...layout, k])} title={`Show ${BUILTIN_SECTIONS[k].label} again`}>
+              + {BUILTIN_SECTIONS[k].label}
+            </button>
+          ))}
       </div>
 
-      <ViewerSection projectId={id} links={d.links} setLinks={S.links} onChanged={onChanged} />
-      <PhotosSection project={project} photos={d.photos} setPhotos={S.photos} entries={d.log} save={save} onChanged={onChanged} />
-      <PurchasesSection project={project} purchases={d.purchases} setPurchases={S.purchases} onChanged={onChanged} formOpen={purchaseFormOpen} setFormOpen={setPurchaseFormOpen} />
-
-      <section id="activity" className="activity-section">
-        <ChartCard title="Activity" subtitle="Last 26 weeks" table={heatmapTable(insights.activity_by_day)} className="span-2">
-          <Heatmap byDay={insights.activity_by_day} />
-        </ChartCard>
-        <section className="card panel">
-          <header className="panel-head">
-            <h3>Recent</h3>
-          </header>
-          <ActivityFeed items={insights.recent} showProject={false} />
-        </section>
-      </section>
-
-      <footer className="danger-zone">
-        <span className="muted small">
-          {project.name} · created {new Date(project.created_at).toLocaleDateString()} · last edited {new Date(project.updated_at).toLocaleString()}
-        </span>
-        <button className="btn btn-danger btn-small" onClick={removeProject}>
-          Delete project
-        </button>
-      </footer>
+      {dialog === 'customize' && (
+        <CustomizeDialog
+          layout={layout}
+          sections={sections}
+          onLayout={setLayout}
+          onAddCustom={addCustom}
+          onDeleteCustom={(s) => setDialog({ deleteSection: s })}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog?.deleteSection && (
+        <ConfirmDialog
+          title="Delete section?"
+          message={`“${dialog.deleteSection.title}” and everything in it will be deleted. This can't be undone.`}
+          confirmLabel="Delete section"
+          onConfirm={() => deleteSection(dialog.deleteSection)}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog === 'delete' && (
+        <ConfirmDialog
+          title="Delete project?"
+          message={`This permanently deletes ${project.name} and everything in it — log entries, tasks, purchases, photos and files. To just put it away, archive it instead.`}
+          typeToConfirm={project.name}
+          confirmLabel="Delete project"
+          onConfirm={async () => {
+            await api.projects.remove(project.id);
+            globalChanged();
+            navigate('/');
+          }}
+          onClose={() => setDialog(null)}
+        />
+      )}
     </main>
   );
 }

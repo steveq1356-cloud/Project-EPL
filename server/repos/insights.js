@@ -141,8 +141,10 @@ export function dashboard() {
   const db = getDb();
   const now = new Date();
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const projects = projectsWithStats();
+  // Archived projects are out of sight: not in the cards, counts or task lists.
+  const projects = projectsWithStats().filter((p) => !p.archived);
   const spend = spendByMonth({ months: 12 });
+  const archivedIds = new Set(db.prepare('SELECT id FROM projects WHERE archived = 1').all().map((r) => r.id));
   const allTime = db.prepare(`SELECT COALESCE(SUM(total_cents), 0) AS c FROM purchases WHERE status IN ${SPENT}`).get().c;
   const monthSpend = spend.months.find((m) => m.month === thisMonth)?.cents ?? 0;
   const lastMonthSpend = spend.months.at(-2)?.cents ?? 0;
@@ -171,9 +173,9 @@ export function dashboard() {
     projects,
     spend,
     activity_by_day: activityByDay({ days: 182 }),
-    recent: activity({ limit: 25 }),
-    upcoming_tasks: upcomingTasks(14),
-    priority_tasks: highPriorityUndated(8),
+    recent: activity({ limit: 25 }).filter((a) => !archivedIds.has(a.project_id)),
+    upcoming_tasks: upcomingTasks(14).filter((t) => !archivedIds.has(t.project_id)),
+    priority_tasks: highPriorityUndated(8).filter((t) => !archivedIds.has(t.project_id)),
     in_transit: inTransit(),
   };
 }
@@ -227,6 +229,17 @@ const SEARCHES = [
     kind: 'link',
     sql: (m) => `SELECT id, project_id, label AS title, url || ' ' || notes AS body, category AS detail, created_at AS at
                  FROM links WHERE ${m("label || ' ' || url || ' ' || notes || ' ' || category")}`,
+  },
+  {
+    kind: 'section',
+    sql: (m) => `SELECT id, project_id, title, kind AS detail, updated_at AS at,
+                   CASE kind
+                     WHEN 'notes' THEN json_extract(data, '$.body')
+                     WHEN 'checklist' THEN (SELECT group_concat(json_extract(value, '$.text'), ' · ') FROM json_each(data, '$.items'))
+                     WHEN 'embed' THEN json_extract(data, '$.url')
+                     ELSE (SELECT group_concat(value, ' ') FROM json_each(data, '$.rows'))
+                   END AS body
+                 FROM sections WHERE ${m("title || ' ' || data")}`,
   },
   {
     kind: 'photo',

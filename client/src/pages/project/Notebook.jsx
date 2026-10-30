@@ -8,10 +8,11 @@ import { useToasts } from '../../components/Toasts.jsx';
 import { formatDateTime } from '../../utils/dates.js';
 
 const byNewest = (a, b) => b.timestamp.localeCompare(a.timestamp) || b.id - a.id;
-const COLLAPSED_COUNT = 6;
+const COLLAPSED_COUNT = 5;
 
 export default function Notebook({ projectId, entries, setEntries, onChanged, initialExpanded = false }) {
   const { deleteWithUndo } = useToasts();
+  const [composing, setComposing] = useState(false);
   const [filter, setFilter] = useState('All');
   const [editingId, setEditingId] = useState(null);
   const [lightbox, setLightbox] = useState(null); // { photos, index }
@@ -30,41 +31,42 @@ export default function Notebook({ projectId, entries, setEntries, onChanged, in
     });
   }
 
-  const counts = Object.fromEntries(LOG_TYPES.map((t) => [t, entries.filter((e) => e.type === t).length]));
+  const types = LOG_TYPES.filter((t) => entries.some((e) => e.type === t));
   const filtered = filter === 'All' ? entries : entries.filter((e) => e.type === filter);
   const shown = expanded || filter !== 'All' ? filtered : filtered.slice(0, COLLAPSED_COUNT);
 
   return (
-    <section id="notebook" className="notebook card">
-      <header className="panel-head">
-        <h2>
-          <span className="section-num">02</span> Notebook
-        </h2>
-        <span className="muted small">{entries.length} entries</span>
-      </header>
+    <div className="notebook">
+      {composing ? (
+        <LogEntryForm
+          projectId={projectId}
+          autoFocus
+          onCancel={() => setComposing(false)}
+          onSaved={(entry) => {
+            upsert(entry);
+            setComposing(false);
+            onChanged();
+          }}
+        />
+      ) : (
+        <button className="composer-stub" onClick={() => setComposing(true)}>
+          <span>Write a log entry…</span>
+          <kbd>N</kbd>
+        </button>
+      )}
 
-      <LogEntryForm
-        projectId={projectId}
-        onSaved={(entry) => {
-          upsert(entry);
-          onChanged();
-        }}
-      />
-
-      {entries.length > 0 && (
-        <div className="filter-chips" role="group" aria-label="Filter by type">
-          {['All', ...LOG_TYPES].map((t) =>
-            t === 'All' || counts[t] ? (
-              <button key={t} className={`chip ${filter === t ? 'active' : ''}`} onClick={() => setFilter(t)}>
-                {t !== 'All' && <span className={`type-dot log-type-${t.toLowerCase()}`} />}
-                {t} <span className="muted">{t === 'All' ? entries.length : counts[t]}</span>
-              </button>
-            ) : null,
-          )}
+      {types.length > 1 && (
+        <div className="filter-tabs" role="group" aria-label="Filter by type">
+          {['All', ...types].map((t) => (
+            <button key={t} className={filter === t ? 'active' : ''} onClick={() => setFilter(t)}>
+              {t !== 'All' && <span className={`type-dot log-type-${t.toLowerCase()}`} />}
+              {t}
+            </button>
+          ))}
         </div>
       )}
 
-      {entries.length === 0 && <p className="muted empty-state">No log entries yet. Write the first one above — paste a photo straight in.</p>}
+      {entries.length === 0 && !composing && <p className="empty-state">No entries yet. Paste a photo straight into a new entry.</p>}
 
       <ol className="log-list">
         {shown.map((entry) =>
@@ -83,49 +85,48 @@ export default function Notebook({ projectId, entries, setEntries, onChanged, in
               />
             </li>
           ) : (
-            <li key={entry.id} id={`log-${entry.id}`} className={`log-entry type-${entry.type.toLowerCase()}`}>
-              <div className="log-rail" aria-hidden>
-                <span className={`log-node log-type-${entry.type.toLowerCase()}`} />
-              </div>
-              <div className="log-content">
-                <header className="log-entry-header">
-                  <span className={`log-type log-type-${entry.type.toLowerCase()}`}>{entry.type}</span>
-                  <h3>{entry.title}</h3>
-                  <time className="muted mono small" dateTime={entry.timestamp}>
-                    {formatDateTime(entry.timestamp)}
-                  </time>
-                  <div className="log-entry-actions">
-                    <button className="btn btn-small btn-ghost" onClick={() => setEditingId(entry.id)}>
-                      Edit
+            <li key={entry.id} id={`log-${entry.id}`} className="log-entry">
+              <header className="log-entry-header">
+                <span className={`type-tag log-type-${entry.type.toLowerCase()}`}>
+                  <span className="type-dot" />
+                  {entry.type}
+                </span>
+                <h3>{entry.title}</h3>
+                <span className="spacer" />
+                <span className="log-entry-actions">
+                  <button className="link-btn" onClick={() => setEditingId(entry.id)}>
+                    Edit
+                  </button>
+                  <button className="link-btn danger-text" onClick={() => remove(entry)}>
+                    Delete
+                  </button>
+                </span>
+                <time className="log-date" dateTime={entry.timestamp}>
+                  {formatDateTime(entry.timestamp)}
+                </time>
+              </header>
+              {entry.body.trim() && <Markdown>{entry.body}</Markdown>}
+              {entry.photos.length > 0 && (
+                <div className="thumb-row">
+                  {entry.photos.map((p, i) => (
+                    <button key={p.id} className="thumb" onClick={() => setLightbox({ photos: entry.photos, index: i })} title={p.caption || p.original_name}>
+                      <img src={p.thumb_url} alt={p.caption || p.original_name} loading="lazy" />
                     </button>
-                    <button className="btn btn-small btn-ghost danger-text" onClick={() => remove(entry)}>
-                      Delete
-                    </button>
-                  </div>
-                </header>
-                {entry.body.trim() && <Markdown>{entry.body}</Markdown>}
-                {entry.photos.length > 0 && (
-                  <div className="thumb-row">
-                    {entry.photos.map((p, i) => (
-                      <button key={p.id} className="thumb" onClick={() => setLightbox({ photos: entry.photos, index: i })} title={p.caption || p.original_name}>
-                        <img src={p.thumb_url} alt={p.caption || p.original_name} loading="lazy" />
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </li>
           ),
         )}
       </ol>
 
       {filter === 'All' && filtered.length > COLLAPSED_COUNT && (
-        <button className="btn show-more" onClick={() => setExpanded((x) => !x)}>
+        <button className="show-more" onClick={() => setExpanded((x) => !x)}>
           {expanded ? 'Show fewer' : `Show all ${filtered.length} entries`}
         </button>
       )}
 
       {lightbox && <Lightbox photos={lightbox.photos} startIndex={lightbox.index} onClose={() => setLightbox(null)} />}
-    </section>
+    </div>
   );
 }
