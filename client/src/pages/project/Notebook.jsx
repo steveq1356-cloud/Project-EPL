@@ -1,7 +1,8 @@
-import { NotebookPen, PenLine } from 'lucide-react';
+import { Clock, NotebookPen, PenLine } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../../api/index.js';
 import EmptyState from '../../components/EmptyState.jsx';
+import { formatMinutes } from '../../components/Timer.jsx';
 import { LOG_TYPES } from '../../constants.js';
 import { celebrate } from '../../utils/celebrate.js';
 import Lightbox from '../../components/Lightbox.jsx';
@@ -101,6 +102,11 @@ export default function Notebook({ projectId, entries, setEntries, onChanged, in
                   {entry.type}
                 </span>
                 <h3>{entry.title}</h3>
+                {entry.minutes ? (
+                  <span className="time-chip" title="Time spent">
+                    <Clock size={12} aria-hidden /> {formatMinutes(entry.minutes)}
+                  </span>
+                ) : null}
                 <span className="spacer" />
                 <span className="log-entry-actions">
                   <button className="link-btn" onClick={() => setEditingId(entry.id)}>

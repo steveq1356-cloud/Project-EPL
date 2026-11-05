@@ -1,4 +1,5 @@
-import { ImagePlus } from 'lucide-react';
+import { ImagePlus, Pin } from 'lucide-react';
+import { formatMinutes, TimerButton } from '../../components/Timer.jsx';
 import ColorPicker from '../../components/ColorPicker.jsx';
 import CoverArt from '../../components/CoverArt.jsx';
 import DateField from '../../components/DateField.jsx';
@@ -50,8 +51,18 @@ export default function ProjectHeader({ project, stats, save, saveState, menuIte
           </select>
         </label>
         <ColorPicker project={project} onChange={(color) => save({ color })} />
+        <button
+          className={`icon-btn pin-btn ${project.pinned ? 'on' : ''}`}
+          onClick={() => save({ pinned: !project.pinned })}
+          title={project.pinned ? 'Unpin from the top of the sidebar' : 'Pin to the top of the sidebar'}
+          aria-pressed={project.pinned}
+          aria-label="Pin project"
+        >
+          <Pin size={16} fill={project.pinned ? 'currentColor' : 'none'} />
+        </button>
         {project.archived && <span className="archived-pill">Archived</span>}
         <span className="spacer" />
+        <TimerButton projectId={project.id} />
         <span className={`save-state ${saveState && !['saving', 'saved'].includes(saveState) ? 'error' : ''}`} aria-live="polite">
           {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState}
         </span>
@@ -112,8 +123,11 @@ export default function ProjectHeader({ project, stats, save, saveState, menuIte
           </dd>
         </div>
         <div>
-          <dt>Last activity</dt>
-          <dd>{timeAgo(stats.last_activity)}</dd>
+          <dt>Time logged</dt>
+          <dd>
+            <span>{stats.time_minutes ? formatMinutes(stats.time_minutes) : <span className="muted">None yet</span>}</span>
+            <span className="muted small">Updated {timeAgo(stats.last_activity)}</span>
+          </dd>
         </div>
       </dl>
     </header>

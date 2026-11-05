@@ -46,6 +46,7 @@ export const DASHBOARD_WIDGETS = {
   projects: 'Project cards',
   upnext: 'Up next (tasks & deliveries)',
   recent: 'Recent activity',
+  timeline: 'Project timeline',
   heatmap: 'Activity heatmap',
   spend: 'Spend by month',
 };

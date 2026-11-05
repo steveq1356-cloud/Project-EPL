@@ -1,3 +1,4 @@
+import { Pin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { timeAgo } from '../utils/dates.js';
 import { colorFor } from '../utils/projectColor.js';
@@ -12,6 +13,11 @@ export default function ProjectCard({ project: p }) {
     <Link to={`/projects/${p.id}`} className="project-card" style={{ '--project': colorFor(p) }}>
       <div className="card-cover">
         {p.cover ? <img src={p.cover.thumb_url} alt="" loading="lazy" /> : <CoverArt project={p} />}
+        {p.pinned && (
+          <span className="card-pin" title="Pinned">
+            <Pin size={13} fill="currentColor" />
+          </span>
+        )}
         <span className={`card-status ${statusClass(p.status)}`}>
           <span className="status-dot" aria-hidden />
           {p.status}

@@ -19,6 +19,7 @@ export function projectStats() {
         (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND done = 1) AS done_tasks,
         (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND done = 0 AND due_date < date('now', 'localtime')) AS overdue_tasks,
         (SELECT COUNT(*) FROM log_entries WHERE project_id = p.id) AS entry_count,
+        (SELECT COALESCE(SUM(minutes), 0) FROM log_entries WHERE project_id = p.id) AS time_minutes,
         (SELECT COUNT(*) FROM photos WHERE project_id = p.id) AS photo_count,
         (SELECT COUNT(*) FROM links WHERE project_id = p.id) AS link_count,
         (SELECT MAX(timestamp) FROM log_entries WHERE project_id = p.id) AS last_entry_at,
@@ -157,7 +158,8 @@ export function dashboard() {
         (SELECT COUNT(*) FROM log_entries WHERE timestamp >= datetime('now', '-30 days')) AS entries_30d,
         (SELECT COUNT(*) FROM log_entries WHERE timestamp >= datetime('now', '-60 days') AND timestamp < datetime('now', '-30 days')) AS entries_prev_30d,
         (SELECT COUNT(*) FROM log_entries) AS entries_total,
-        (SELECT COUNT(*) FROM photos) AS photos_total`,
+        (SELECT COUNT(*) FROM photos) AS photos_total,
+        (SELECT COALESCE(SUM(minutes), 0) FROM log_entries WHERE timestamp >= datetime('now', '-7 days')) AS minutes_7d`,
     )
     .get();
 
@@ -177,6 +179,11 @@ export function dashboard() {
     upcoming_tasks: upcomingTasks(14).filter((t) => !archivedIds.has(t.project_id)),
     priority_tasks: highPriorityUndated(8).filter((t) => !archivedIds.has(t.project_id)),
     in_transit: inTransit(),
+    // Milestone entries, for the dashboard timeline.
+    milestones: db
+      .prepare("SELECT id, project_id, title, timestamp FROM log_entries WHERE type = 'Milestone' ORDER BY timestamp")
+      .all()
+      .filter((m) => !archivedIds.has(m.project_id)),
   };
 }
 

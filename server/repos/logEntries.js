@@ -15,6 +15,11 @@ function clean(input, { creating }) {
     if (!LOG_TYPES.includes(input.type)) throw new ValidationError(`Type must be one of: ${LOG_TYPES.join(', ')}`);
     out.type = input.type;
   }
+  if ('minutes' in input) {
+    const m = input.minutes === '' || input.minutes == null ? null : Math.round(Number(input.minutes));
+    if (m !== null && (!Number.isFinite(m) || m < 0 || m > 24 * 60)) throw new ValidationError('Time spent must be between 0 and 1440 minutes');
+    out.minutes = m || null;
+  }
   if ('timestamp' in input && input.timestamp) {
     const t = new Date(input.timestamp);
     if (Number.isNaN(t.getTime())) throw new ValidationError('timestamp is not a valid date');

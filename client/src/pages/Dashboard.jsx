@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom';
 import { api } from '../api/index.js';
 import { DASHBOARD_WIDGETS, PROJECT_STATUSES } from '../constants.js';
 import ActivityFeed from '../components/ActivityFeed.jsx';
+import Timeline from '../components/charts/Timeline.jsx';
+import { formatMinutes } from '../components/Timer.jsx';
 import { ChartCard, ColumnChart, Heatmap, heatmapTable } from '../components/charts/Charts.jsx';
 import { useData } from '../components/DataContext.jsx';
 import Modal from '../components/Modal.jsx';
@@ -71,7 +73,7 @@ export default function Dashboard({ onQuickAdd, onNewProject }) {
   const projects = useMemo(() => {
     if (!data) return [];
     const list = filter === 'All' ? data.projects : data.projects.filter((p) => p.status === filter);
-    return [...list].sort((a, b) => PROJECT_STATUSES.indexOf(a.status) - PROJECT_STATUSES.indexOf(b.status) || b.stats.last_activity.localeCompare(a.stats.last_activity));
+    return [...list].sort((a, b) => b.pinned - a.pinned || PROJECT_STATUSES.indexOf(a.status) - PROJECT_STATUSES.indexOf(b.status) || b.stats.last_activity.localeCompare(a.stats.last_activity));
   }, [data, filter]);
 
   if (error) return <main className="page"><p className="error">Couldn't load the dashboard: {error}</p></main>;
@@ -146,8 +148,11 @@ export default function Dashboard({ onQuickAdd, onNewProject }) {
             <dd>{money(k.spend_this_month_cents, { whole: true })}</dd>
           </div>
           <div>
-            <dt>Entries, last 30 days</dt>
-            <dd>{k.entries_30d}</dd>
+            <dt>Logged this week</dt>
+            <dd>
+              {k.minutes_7d ? formatMinutes(k.minutes_7d) : k.entries_30d}
+              <span className="stat-note muted">{k.minutes_7d ? 'of work' : 'entries in 30 days'}</span>
+            </dd>
           </div>
         </dl>
       )}
@@ -248,6 +253,17 @@ export default function Dashboard({ onQuickAdd, onNewProject }) {
             </section>
           )}
         </div>
+      )}
+
+      {show('timeline') && (
+        <section className="dash-block">
+          <div className="block-head">
+            <h2>Timeline</h2>
+          </div>
+          <div className="card-plain timeline-card">
+            <Timeline projects={data.projects} milestones={data.milestones ?? []} />
+          </div>
+        </section>
       )}
 
       {charts.length > 0 && (

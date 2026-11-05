@@ -43,6 +43,7 @@ export const SHORTCUTS = [
   ['G then D', 'Go to dashboard'],
   ['G then 1–9', 'Go to project 1–9 in the sidebar'],
   ['?', 'Show these shortcuts'],
+  [',', 'Open settings (theme, accent, density)'],
   ['Ctrl+Enter', 'Save the form you are in'],
   ['Esc', 'Close a dialog / cancel editing'],
 ];

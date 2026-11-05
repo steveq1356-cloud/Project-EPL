@@ -7,7 +7,7 @@ import { createSection } from './sections.js';
 
 export const PROJECT_STATUSES = ['Idea', 'Active', 'On Hold', 'Done', 'Abandoned'];
 
-const EDITABLE = ['name', 'summary', 'goal', 'status', 'start_date', 'target_date', 'next_action', 'tags', 'cover_photo_id', 'budget', 'specs', 'archived', 'layout', 'color'];
+const EDITABLE = ['name', 'summary', 'goal', 'status', 'start_date', 'target_date', 'next_action', 'tags', 'cover_photo_id', 'budget', 'specs', 'archived', 'layout', 'color', 'pinned'];
 export const PROJECT_COLORS = ['indigo', 'blue', 'sky', 'teal', 'emerald', 'lime', 'amber', 'orange', 'rose', 'violet'];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -15,6 +15,7 @@ const fromRow = (row) =>
   row && {
     ...row,
     archived: Boolean(row.archived),
+    pinned: Boolean(row.pinned),
     tags: JSON.parse(row.tags),
     specs: JSON.parse(row.specs),
     layout: row.layout ? JSON.parse(row.layout) : DEFAULT_LAYOUT,
@@ -89,7 +90,7 @@ function clean(input, { creating, id }) {
     } else if (key === 'color') {
       value = value || null;
       if (value && !PROJECT_COLORS.includes(value)) throw new ValidationError(`Color must be one of: ${PROJECT_COLORS.join(', ')}`);
-    } else if (key === 'archived') {
+    } else if (key === 'archived' || key === 'pinned') {
       value = value ? 1 : 0;
     } else if (key === 'layout') {
       if (creating) continue; // set after the project (and its custom sections) exist

@@ -7,18 +7,20 @@ import Modal from './components/Modal.jsx';
 import NewProjectDialog from './components/NewProjectDialog.jsx';
 import QuickAdd from './components/QuickAdd.jsx';
 import SearchPalette from './components/SearchPalette.jsx';
+import SettingsDialog from './components/SettingsDialog.jsx';
+import { TimerProvider } from './components/Timer.jsx';
 import Sidebar, { sidebarOrder } from './components/Sidebar.jsx';
 import { ToastProvider } from './components/Toasts.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import ProjectPage from './pages/ProjectPage.jsx';
 
 function Shell() {
-  const { theme, cycle } = useTheme();
+  const { theme, cycle, appearance, update } = useTheme();
   const { projects } = useData();
   const navigate = useNavigate();
   const projectMatch = useMatch('/projects/:id');
   const currentProject = projectMatch ? Number(projectMatch.params.id) : null;
-  const [dialog, setDialog] = useState(null); // 'search' | 'help' | 'project' | { quickAdd: kind }
+  const [dialog, setDialog] = useState(null); // 'search' | 'help' | 'settings' | 'project' | { quickAdd: kind }
   const [navOpen, setNavOpen] = useState(false);
 
   const quickAdd = (kind) => setDialog({ quickAdd: kind });
@@ -30,6 +32,7 @@ function Shell() {
     p: () => quickAdd('purchase'),
     t: () => quickAdd('task'),
     '?': () => setDialog('help'),
+    ',': () => setDialog('settings'),
     'g d': () => navigate('/'),
     ...goto,
   });
@@ -45,6 +48,7 @@ function Shell() {
         onQuickAdd={() => quickAdd('log')}
         onNewProject={() => setDialog('project')}
         onHelp={() => setDialog('help')}
+        onSettings={() => setDialog('settings')}
       />
       <button className="nav-toggle btn" onClick={() => setNavOpen((o) => !o)} aria-label="Menu">
         ☰
@@ -72,6 +76,7 @@ function Shell() {
       {dialog === 'search' && <SearchPalette onClose={() => setDialog(null)} />}
       {dialog === 'project' && <NewProjectDialog onClose={() => setDialog(null)} />}
       {dialog?.quickAdd && <QuickAdd kind={dialog.quickAdd} projectId={currentProject} onClose={() => setDialog(null)} />}
+      {dialog === 'settings' && <SettingsDialog appearance={appearance} update={update} onClose={() => setDialog(null)} />}
       {dialog === 'help' && (
         <Modal title="Keyboard shortcuts" onClose={() => setDialog(null)}>
           <dl className="shortcut-list">
@@ -100,7 +105,9 @@ export default function App() {
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ToastProvider>
         <DataProvider>
-          <Shell />
+          <TimerProvider>
+            <Shell />
+          </TimerProvider>
         </DataProvider>
       </ToastProvider>
     </BrowserRouter>

@@ -1,8 +1,10 @@
 import confetti from 'canvas-confetti';
+import { celebrationsOn } from '../hooks/useTheme.js';
 
 // A small burst of confetti — for finishing every task or logging a milestone.
-// Skipped automatically for people who prefer reduced motion.
+// Skipped when turned off in Settings, or for people who prefer reduced motion.
 export function celebrate(origin = { x: 0.5, y: 0.6 }) {
+  if (!celebrationsOn()) return;
   confetti({
     particleCount: 70,
     spread: 70,

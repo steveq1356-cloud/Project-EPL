@@ -1,9 +1,10 @@
-import { Archive, ChevronDown, ChevronRight, Keyboard, LayoutDashboard, Monitor, Moon, Plus, Search, Sun } from 'lucide-react';
+import { Archive, ChevronDown, ChevronRight, Compass, Keyboard, LayoutDashboard, Monitor, Moon, Pin, Plus, Search, Settings, Sun } from 'lucide-react';
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { PROJECT_STATUSES } from '../constants.js';
 import { useData } from './DataContext.jsx';
 import ProjectAvatar from './ProjectAvatar.jsx';
+import { TimerPill } from './Timer.jsx';
 
 export const sidebarOrder = (projects) =>
   projects.filter((p) => !p.archived).sort((a, b) => PROJECT_STATUSES.indexOf(a.status) - PROJECT_STATUSES.indexOf(b.status) || a.name.localeCompare(b.name));
@@ -18,14 +19,16 @@ function ProjectLink({ p }) {
   );
 }
 
-const THEME_ICON = { light: Sun, dark: Moon, system: Monitor };
-const THEME_LABEL = { light: 'Light', dark: 'Dark', system: 'Auto' };
+const THEME_ICON = { light: Sun, dark: Moon, system: Monitor, blueprint: Compass, midnight: Moon };
+const THEME_LABEL = { light: 'Light', dark: 'Dark', system: 'Auto', blueprint: 'Blueprint', midnight: 'Midnight' };
 
 // Always-visible project list so any project is one click away.
-export default function Sidebar({ onNewProject, onSearch, onQuickAdd, onHelp, theme, onTheme, open, onClose }) {
+export default function Sidebar({ onNewProject, onSearch, onQuickAdd, onHelp, onSettings, theme, onTheme, open, onClose }) {
   const { projects } = useData();
   const [showArchived, setShowArchived] = useState(false);
-  const live = sidebarOrder(projects);
+  const ordered = sidebarOrder(projects);
+  const pinned = ordered.filter((p) => p.pinned);
+  const live = ordered.filter((p) => !p.pinned);
   const archived = projects.filter((p) => p.archived);
   const ThemeIcon = THEME_ICON[theme] ?? Monitor;
 
@@ -61,8 +64,21 @@ export default function Sidebar({ onNewProject, onSearch, onQuickAdd, onHelp, th
           <kbd>N</kbd>
         </button>
 
+        {pinned.length > 0 && (
+          <>
+            <div className="nav-heading">
+              <span className="nav-heading-label">
+                <Pin size={12} aria-hidden /> Pinned
+              </span>
+            </div>
+            {pinned.map((p) => (
+              <ProjectLink key={p.id} p={p} />
+            ))}
+          </>
+        )}
+
         <div className="nav-heading">
-          <span>Projects</span>
+          <span>{pinned.length ? 'Other projects' : 'Projects'}</span>
           <button className="icon-btn small" onClick={onNewProject} title="New project" aria-label="New project">
             <Plus size={15} />
           </button>
@@ -70,7 +86,7 @@ export default function Sidebar({ onNewProject, onSearch, onQuickAdd, onHelp, th
         {live.map((p) => (
           <ProjectLink key={p.id} p={p} />
         ))}
-        {live.length === 0 && (
+        {ordered.length === 0 && (
           <button className="nav-item muted" onClick={onNewProject}>
             <Plus size={16} className="nav-icon" aria-hidden />
             <span className="nav-label">Create your first project</span>
@@ -92,13 +108,20 @@ export default function Sidebar({ onNewProject, onSearch, onQuickAdd, onHelp, th
         )}
       </nav>
 
+      <TimerPill />
+
       <footer className="sidebar-footer">
-        <button className="footer-btn" onClick={onTheme} title="Theme: auto → light → dark">
+        <button className="footer-btn" onClick={onTheme} title="Switch theme (auto → light → dark) — more themes in Settings">
           <ThemeIcon size={15} aria-hidden /> {THEME_LABEL[theme] ?? 'Auto'}
         </button>
-        <button className="footer-btn" onClick={onHelp} title="Keyboard shortcuts">
-          <Keyboard size={15} aria-hidden /> Shortcuts
-        </button>
+        <span className="footer-right">
+          <button className="icon-btn" onClick={onHelp} title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">
+            <Keyboard size={16} />
+          </button>
+          <button className="icon-btn" onClick={onSettings} title="Settings (,)" aria-label="Settings">
+            <Settings size={16} />
+          </button>
+        </span>
       </footer>
     </aside>
   );

@@ -12,6 +12,7 @@ export default function LogEntryForm({ projectId, entry, onSaved, onCancel, auto
   const [type, setType] = useState(entry?.type ?? 'Note');
   const [body, setBody] = useState(entry?.body ?? '');
   const [when, setWhen] = useState(toLocalInput(entry?.timestamp));
+  const [minutes, setMinutes] = useState(entry?.minutes ?? '');
   const [keptPhotos, setKeptPhotos] = useState(entry?.photos ?? []);
   const [newFiles, setNewFiles] = useState([]);
   const [preview, setPreview] = useState(false);
@@ -27,7 +28,7 @@ export default function LogEntryForm({ projectId, entry, onSaved, onCancel, auto
     setSaving(true);
     setError(null);
     try {
-      const fields = { title, type, body, timestamp: fromLocalInput(when) };
+      const fields = { title, type, body, timestamp: fromLocalInput(when), minutes: minutes === '' ? null : Number(minutes) };
       const saved = entry ? await api.log.update(entry.id, fields) : await api.log.create(projectId, fields);
 
       const removed = (entry?.photos ?? []).filter((p) => !keptPhotos.some((k) => k.id === p.id));
@@ -40,6 +41,7 @@ export default function LogEntryForm({ projectId, entry, onSaved, onCancel, auto
         setBody('');
         setType('Note');
         setWhen(toLocalInput());
+        setMinutes('');
         setNewFiles([]);
         setPreview(false);
       }
@@ -75,6 +77,7 @@ export default function LogEntryForm({ projectId, entry, onSaved, onCancel, auto
           aria-label="Title"
         />
         <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} aria-label="Date and time" />
+        <input className="log-form-minutes" type="number" min="0" max="1440" value={minutes} onChange={(e) => setMinutes(e.target.value)} placeholder="min" title="Time spent, in minutes (optional)" aria-label="Minutes spent" />
       </div>
 
       <div className="log-form-body">
